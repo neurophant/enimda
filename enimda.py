@@ -57,22 +57,16 @@ def scan(im):
     """
     Scan if image has borders at the top, right, bottom and left
     """
-    w = im.size[0]
-    h = im.size[1]
+    w, h = im.size
+    array = np.array(im)
 
     # Top
     center_ = None
     diff_ = None
     for center in reversed(range(1, h // 4 + 1)):
-        upper = tuple(im.getpixel((x, y))
-                      for x in range(w)
-                      for y in range(center))
-        lower = tuple(im.getpixel((x, y))
-                      for x in range(w)
-                      for y in range(center, 2 * center))
-        eu = entropy(upper)
-        el = entropy(lower)
-        diff = eu / el if el != 0.0 else eu - el
+        upper = entropy(array[0: center, 0: w].flatten())
+        lower = entropy(array[center: 2 * center, 0: w].flatten())
+        diff = upper / lower if lower != 0.0 else MEDIAN
         if center_ is None or diff_ is None:
             center_ = center
             diff_ = diff
@@ -85,15 +79,9 @@ def scan(im):
     center_ = None
     diff_ = None
     for center in reversed(range(1, w // 4 + 1)):
-        upper = tuple(im.getpixel((x, y))
-                      for x in range(w - center, w)
-                      for y in range(h))
-        lower = tuple(im.getpixel((x, y))
-                      for x in range(w - 2 * center, w - center)
-                      for y in range(h))
-        eu = entropy(upper)
-        el = entropy(lower)
-        diff = eu / el if el != 0.0 else eu - el
+        upper = entropy(array[0: h, w - center: w].flatten())
+        lower = entropy(array[0: h, w - 2 * center: w - center].flatten())
+        diff = upper / lower if lower != 0.0 else MEDIAN
         if center_ is None or diff_ is None:
             center_ = center
             diff_ = diff
@@ -106,15 +94,9 @@ def scan(im):
     center_ = None
     diff_ = None
     for center in reversed(range(1, h // 4 + 1)):
-        upper = tuple(im.getpixel((x, y))
-                      for x in range(w)
-                      for y in range(h - center, h))
-        lower = tuple(im.getpixel((x, y))
-                      for x in range(w)
-                      for y in range(h - 2 * center, h - center))
-        eu = entropy(upper)
-        el = entropy(lower)
-        diff = eu / el if el != 0.0 else eu - el
+        upper = entropy(array[h - center: h, 0: w].flatten())
+        lower = entropy(array[h - 2 * center: h - center, 0: w].flatten())
+        diff = upper / lower if lower != 0.0 else MEDIAN
         if center_ is None or diff_ is None:
             center_ = center
             diff_ = diff
@@ -127,15 +109,9 @@ def scan(im):
     center_ = None
     diff_ = None
     for center in reversed(range(1, w // 4 + 1)):
-        upper = tuple(im.getpixel((x, y))
-                      for x in range(center)
-                      for y in range(h))
-        lower = tuple(im.getpixel((x, y))
-                      for x in range(center, 2 * center)
-                      for y in range(h))
-        eu = entropy(upper)
-        el = entropy(lower)
-        diff = eu / el if el != 0.0 else eu - el
+        upper = entropy(array[0: h, 0: center].flatten())
+        lower = entropy(array[0: h, center: 2 * center].flatten())
+        diff = upper / lower if lower != 0.0 else MEDIAN
         if center_ is None or diff_ is None:
             center_ = center
             diff_ = diff
@@ -153,8 +129,7 @@ def outline(im, top, right, bottom, left):
     """
     Draw cut-lines
     """
-    w = im.size[0]
-    h = im.size[1]
+    w, h = im.size
 
     draw = ImageDraw.Draw(im)
 
@@ -182,18 +157,13 @@ rate = 0
 for index, name in enumerate(source_bordered_files):
     im = converted(join(SOURCE_BORDERED_PATH, name))
     res = scan(im)
-    outline(
-        im,
-        res[0][1] if res[0][0] else None,
-        res[1][1] if res[1][0] else None,
-        res[2][1] if res[2][0] else None,
-        res[3][1] if res[3][0] else None)
+    outline(im, *tuple(res[i][1] if res[i][0] else None for i in range(4)))
     im.save(join(DETECTED_BORDERED_PATH, name))
     im.close()
 
     print(index, name, res)
 
-    rate += int(any((res[0][0], res[1][0], res[2][0], res[3][0], )))
+    rate += int(any(tuple(res[i][0] for i in range(4))))
 print(rate/len(source_bordered_files))
 
 # Process clear images
@@ -201,16 +171,11 @@ rate = 0
 for index, name in enumerate(source_clear_files):
     im = converted(join(SOURCE_CLEAR_PATH, name))
     res = scan(im)
-    outline(
-        im,
-        res[0][1] if res[0][0] else None,
-        res[1][1] if res[1][0] else None,
-        res[2][1] if res[2][0] else None,
-        res[3][1] if res[3][0] else None)
+    outline(im, *tuple(res[i][1] if res[i][0] else None for i in range(4)))
     im.save(join(DETECTED_CLEAR_PATH, name))
     im.close()
 
     print(index, name, res)
 
-    rate += int(any((res[0][0], res[1][0], res[2][0], res[3][0], )))
+    rate += int(any(tuple(res[i][0] for i in range(4))))
 print(rate/len(source_clear_files))

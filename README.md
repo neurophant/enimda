@@ -21,17 +21,17 @@ center of image and entropies difference is lower than pre-set median
 
 ## Prerequisites
 
-- Ubuntu 16.04
+- Ubuntu 16.04 x64
 
 
 ## Dependencies
 
-- Python 3.5+
-- Pillow
-- NumPy
+- Python 3.5
+- Pillow 3.2
+- NumPy 1.11
 
 
-## Install Python 3.5+
+## Install Python 3.5
 
 ```
 sudo add-apt-repository ppa:fkrull/deadsnakes
@@ -70,5 +70,11 @@ each image has its borders outlined for visual demonstration
 
 ## Accuracy
 
-Using included examples and current median value, detection rate for bordered
-images is 72%, false detection rate for clear images is 3%
+Using included examples and current median value (0.5), detection rate for
+bordered images is 72%, false detection rate for clear images is 3%
+
+
+## Performance
+
+With current settings one image is getting processed within 10-20 seconds on
+Intel® Pentium(R) CPU 2117U @ 1.80GHz × 2 with 4 Gb RAM
