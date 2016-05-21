@@ -66,3 +66,9 @@ and without (clear)
 
 In the **detected** folder there are the results of source images processing - 
 each image has its borders outlined for visual demonstration
+
+
+## Accuracy
+
+Using included examples detection rate for bordered images is 91%, false
+detection rate for clear images is 14%
