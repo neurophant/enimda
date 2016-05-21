@@ -18,7 +18,7 @@ DETECTED_BORDERED_PATH = './images/detected/bordered'   # Bordered results
 # image has border on the particular side
 # Make it lower to exclude monotone cases and higher to crop every image which
 # has real content
-MEDIAN = 0.5
+MEDIAN = 0.3
 
 
 # Source files - clear and bordered, sorted alphabetically
@@ -169,6 +169,7 @@ def outline(im, top, right, bottom, left):
 
 
 # Process bordered images
+rate = 0
 for index, name in enumerate(source_bordered_files):
     im = converted(join(SOURCE_BORDERED_PATH, name))
     res = scan(im)
@@ -183,7 +184,11 @@ for index, name in enumerate(source_bordered_files):
 
     print(index, name, res)
 
+    rate += int(any((res[0][0], res[1][0], res[2][0], res[3][0], )))
+print(rate/len(source_bordered_files))
+
 # Process clear images
+rate = 0
 for index, name in enumerate(source_clear_files):
     im = converted(join(SOURCE_CLEAR_PATH, name))
     res = scan(im)
@@ -197,3 +202,6 @@ for index, name in enumerate(source_clear_files):
     im.close()
 
     print(index, name, res)
+
+    rate += int(any((res[0][0], res[1][0], res[2][0], res[3][0], )))
+print(rate/len(source_clear_files))
