@@ -1,6 +1,6 @@
 # ENIMDA
 
-ENtropy-based IMage border Detection Algorithm: find out if your image has
+ENtropy-based IMage border Detection Algorithm: finds out if your image has
 borders or whitespaces around and helps you to trim border from your image by
 providing approximate whitespace offsets for every side of a picture.
 
@@ -71,7 +71,7 @@ each image has its borders outlined for visual demonstration
 ## Accuracy
 
 Using included examples and current median value (0.5), detection rate for
-bordered images is 72%, false detection rate for clear images is 3%
+bordered images is 81%, false detection rate for clear images is 8%
 
 
 ## Performance
