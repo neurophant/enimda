@@ -61,60 +61,48 @@ def scan(im):
     array = np.array(im)
 
     # Top
-    center_ = None
-    diff_ = None
+    center_ = 0
+    diff_ = MEDIAN
     for center in reversed(range(1, h // 4 + 1)):
         upper = entropy(array[0: center, 0: w].flatten())
         lower = entropy(array[center: 2 * center, 0: w].flatten())
         diff = upper / lower if lower != 0.0 else MEDIAN
-        if center_ is None or diff_ is None:
-            center_ = center
-            diff_ = diff
         if diff < diff_:
             center_ = center
             diff_ = diff
     top = diff_ < MEDIAN and center_ < h // 4, center_, diff_
 
     # Right
-    center_ = None
-    diff_ = None
+    center_ = 0
+    diff_ = MEDIAN
     for center in reversed(range(1, w // 4 + 1)):
         upper = entropy(array[0: h, w - center: w].flatten())
         lower = entropy(array[0: h, w - 2 * center: w - center].flatten())
         diff = upper / lower if lower != 0.0 else MEDIAN
-        if center_ is None or diff_ is None:
-            center_ = center
-            diff_ = diff
         if diff < diff_:
             center_ = center
             diff_ = diff
     right = diff_ < MEDIAN and center_ < w // 4, center_, diff_
 
     # Bottom
-    center_ = None
-    diff_ = None
+    center_ = 0
+    diff_ = MEDIAN
     for center in reversed(range(1, h // 4 + 1)):
         upper = entropy(array[h - center: h, 0: w].flatten())
         lower = entropy(array[h - 2 * center: h - center, 0: w].flatten())
         diff = upper / lower if lower != 0.0 else MEDIAN
-        if center_ is None or diff_ is None:
-            center_ = center
-            diff_ = diff
         if diff < diff_:
             center_ = center
             diff_ = diff
     bottom = diff_ < MEDIAN and center_ < h // 4, center_, diff_
 
     # Left
-    center_ = None
-    diff_ = None
+    center_ = 0
+    diff_ = MEDIAN
     for center in reversed(range(1, w // 4 + 1)):
         upper = entropy(array[0: h, 0: center].flatten())
         lower = entropy(array[0: h, center: 2 * center].flatten())
         diff = upper / lower if lower != 0.0 else MEDIAN
-        if center_ is None or diff_ is None:
-            center_ = center
-            diff_ = diff
         if diff < diff_:
             center_ = center
             diff_ = diff
@@ -130,24 +118,23 @@ def outline(im, top, right, bottom, left):
     Draw cut-lines
     """
     w, h = im.size
-
     draw = ImageDraw.Draw(im)
 
     if top is not None:
-        draw.line(((0, top, ), (w, top, ), ), fill=0, width=3)
-        draw.line(((0, top, ), (w, top, ), ), fill=255, width=1)
+        draw.line(((0, top - 1, ), (w - 1, top - 1, ), ), fill=0, width=3)
+        draw.line(((0, top - 1, ), (w - 1, top - 1, ), ), fill=255, width=1)
 
     if right is not None:
-        draw.line(((w - right, 0, ), (w - right, h, ), ), fill=0, width=3)
-        draw.line(((w - right, 0, ), (w - right, h, ), ), fill=255, width=1)
+        draw.line(((w - right - 1, 0, ), (w - right - 1, h - 1, ), ), fill=0, width=3)
+        draw.line(((w - right - 1, 0, ), (w - right - 1, h - 1, ), ), fill=255, width=1)
 
     if bottom is not None:
-        draw.line(((0, h - bottom, ), (w, h - bottom, ), ), fill=0, width=3)
-        draw.line(((0, h - bottom, ), (w, h - bottom, ), ), fill=255, width=1)
+        draw.line(((0, h - bottom - 1, ), (w - 1, h - bottom - 1, ), ), fill=0, width=3)
+        draw.line(((0, h - bottom - 1, ), (w - 1, h - bottom - 1, ), ), fill=255, width=1)
 
     if left is not None:
-        draw.line(((left, 0, ), (left, h, ), ), fill=0, width=3)
-        draw.line(((left, 0, ), (left, h, ), ), fill=255, width=1)
+        draw.line(((left - 1, 0, ), (left - 1, h - 1, ), ), fill=0, width=3)
+        draw.line(((left - 1, 0, ), (left - 1, h - 1, ), ), fill=255, width=1)
 
     return
 
@@ -164,7 +151,7 @@ for index, name in enumerate(source_bordered_files):
     print(index, name, res)
 
     rate += int(any(tuple(res[i][0] for i in range(4))))
-print(rate/len(source_bordered_files))
+print(rate / len(source_bordered_files))
 
 # Process clear images
 rate = 0
@@ -178,4 +165,4 @@ for index, name in enumerate(source_clear_files):
     print(index, name, res)
 
     rate += int(any(tuple(res[i][0] for i in range(4))))
-print(rate/len(source_clear_files))
+print(rate / len(source_clear_files))
