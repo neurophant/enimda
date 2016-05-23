@@ -73,8 +73,13 @@ def scan(im):
         delta = MEDIAN
         for center in reversed(range(1, h // 4 + 1)):
             upper = entropy(rot[0: center, 0: w].flatten())
+
+            if upper == 0.0:
+                med = center
+                break
+
             lower = entropy(rot[center: 2 * center, 0: w].flatten())
-            diff = upper / lower if lower != 0.0 else MEDIAN
+            diff = upper / lower if lower != 0.0 else delta
 
             if diff < delta and diff < MEDIAN:
                 med = center
