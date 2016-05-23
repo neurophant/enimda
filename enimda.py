@@ -6,9 +6,9 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 
-IMAGE_SIZE = 300    # Resize minimum side of image to this with aspect ratio
-CONVERT_MODE = 'L'  # Grayscale (default)
-SIDE_COUNT = 4
+IMAGE_SIZE = 300    # Resize min side of image to this one keeping aspect ratio
+CONVERT_MODE = 'L'  # Grayscale mode (default)
+SIDE_COUNT = 4      # Count of image sides
 
 SOURCE_CLEAR_PATH = './images/source/clear'         # Sources without border
 SOURCE_BORDERED_PATH = './images/source/bordered'   # Bordered sources
@@ -32,7 +32,8 @@ source_bordered_files = sorted(_ for _ in listdir(SOURCE_BORDERED_PATH)
 
 def converted(path):
     """
-    Get PIL image converted to pre-set mode and size
+    Get PIL image converted to pre-set mode and size keeping its original
+    aspect ratio
     """
     im = Image.open(path)
     im = im.convert(CONVERT_MODE)
@@ -47,70 +48,77 @@ def converted(path):
 
 def entropy(signal):
     """
-    Calculate entropy for 1D array
+    Calculate entropy for 1D numpy array
     """
     signal = np.array(signal)
     propab = [np.size(signal[signal == i]) / (1.0 * signal.size)
               for i in list(set(signal))]
+
     return np.sum([p * np.log2(1.0 / p) for p in propab])
 
 
-def scan(im, sides=None):
+def scan(im):
     """
     Scan if image has borders at the top, right, bottom and left
     """
-    if sides is None:
-        sides = tuple(s for s in range(SIDE_COUNT))
-
     arr = np.array(im)
-    res = []
+    meds = []
 
     for side in range(SIDE_COUNT):
-        if side not in sides:
-            res.append((False, 0, ))
-        else:
-            rot = np.rot90(arr, k=side)
-            h, w = rot.shape
+        # Rotate array counter-clockwise to keep side of interest on top
+        rot = np.rot90(arr, k=side)
+        h, w = rot.shape    # Array size
 
-            med = 0
-            delta = MEDIAN
-            for center in reversed(range(1, h // 4 + 1)):
-                upper = entropy(rot[0: center, 0: w].flatten())
-                lower = entropy(rot[center: 2 * center, 0: w].flatten())
-                diff = upper / lower if lower != 0.0 else MEDIAN
-                if diff < delta:
-                    med = center
-                    delta = diff
-            has = delta < MEDIAN and med < h // 4
-            res.append((has, med, ))
+        med = 0
+        delta = MEDIAN
+        for center in reversed(range(1, h // 4 + 1)):
+            upper = entropy(rot[0: center, 0: w].flatten())
+            lower = entropy(rot[center: 2 * center, 0: w].flatten())
+            diff = upper / lower if lower != 0.0 else MEDIAN
 
-    # Results
-    has = any(tuple(res[s][0] for s in range(SIDE_COUNT)))
+            if diff < delta and diff < MEDIAN:
+                med = center
+                delta = diff
 
-    left = res[3][1] - 1 if res[3][0] else 0
-    upper = res[0][1] - 1 if res[0][0] else 0
-    right = im.size[0] - res[1][1] - 1 if res[1][0] else im.size[0] - 1
-    lower = im.size[1] - res[2][1] - 1 if res[2][0] else im.size[1] - 1
+        meds.append(med)
+
+    # Border offsets and cropped image
+    # If calculated offset is 0 - use original size
+    w, h = im.size
+    left = meds[3]
+    upper = meds[0]
+    right = w - 1 - meds[1]
+    lower = h - 1 - meds[2]
     im = im.crop((left, upper, right, lower, ))
 
-    sides = tuple(s for s in range(SIDE_COUNT) if res[s][0])
-    meds = tuple(res[s][1] if res[s][0] else 0 for s in range(SIDE_COUNT))
-
-    return has, im, sides, meds
+    return meds, im
 
 
-def detect(im):
-    has = True
-    sides = None
+def detect(im, iterative=False):
+    """
+    Iterative border detection
+    iterative=True - find border offsets with high precision (slow)
+    iterative=False - detect if image has any borders (fast)
+    """
+    w, h = im.size
     meds = (0, 0, 0, 0, )
+
     while True:
-        has, crop, sides, adds = scan(im, sides=sides)
-        if not has:
+        adds, crop = scan(im)
+
+        if not any(adds):
             break
+
         im = crop
         meds = tuple(map(operator.add, meds, adds))
 
-    return has, im, sides, meds
+        if not iterative:
+            break
+
+    return (meds[0] if meds[0] < h // 4 else 0,
+            meds[1] if meds[1] < w // 4 else 0,
+            meds[2] if meds[2] < h // 4 else 0,
+            meds[3] if meds[3] < w // 4 else 0), im
 
 
 def outline(im, top, right, bottom, left):
@@ -120,21 +128,25 @@ def outline(im, top, right, bottom, left):
     w, h = im.size
     draw = ImageDraw.Draw(im)
 
-    if top is not None:
-        draw.line(((0, top - 1, ), (w - 1, top - 1, ), ), fill=0, width=3)
-        draw.line(((0, top - 1, ), (w - 1, top - 1, ), ), fill=255, width=1)
+    if top > 0:
+        draw.line(((0, top + 1, ), (w - 1, top + 1, ), ), fill=0, width=3)
+        draw.line(((0, top + 1, ), (w - 1, top + 1, ), ), fill=255, width=1)
 
-    if right is not None:
-        draw.line(((w - right - 1, 0, ), (w - right - 1, h - 1, ), ), fill=0, width=3)
-        draw.line(((w - right - 1, 0, ), (w - right - 1, h - 1, ), ), fill=255, width=1)
+    if right > 0:
+        draw.line(((w - 2 - right, 0, ), (w - 2 - right, h - 1, ), ), fill=0,
+                  width=3)
+        draw.line(((w - 2 - right, 0, ), (w - 2 - right, h - 1, ), ), fill=255,
+                  width=1)
 
-    if bottom is not None:
-        draw.line(((0, h - bottom - 1, ), (w - 1, h - bottom - 1, ), ), fill=0, width=3)
-        draw.line(((0, h - bottom - 1, ), (w - 1, h - bottom - 1, ), ), fill=255, width=1)
+    if bottom > 0:
+        draw.line(((0, h - 2 - bottom, ), (w - 1, h - 2 - bottom, ), ), fill=0,
+                  width=3)
+        draw.line(((0, h - 2 - bottom, ), (w - 1, h - 2 - bottom, ), ),
+                  fill=255, width=1)
 
-    if left is not None:
-        draw.line(((left - 1, 0, ), (left - 1, h - 1, ), ), fill=0, width=3)
-        draw.line(((left - 1, 0, ), (left - 1, h - 1, ), ), fill=255, width=1)
+    if left > 0:
+        draw.line(((left + 1, 0, ), (left + 1, h - 1, ), ), fill=0, width=3)
+        draw.line(((left + 1, 0, ), (left + 1, h - 1, ), ), fill=255, width=1)
 
     return
 
@@ -143,22 +155,30 @@ def outline(im, top, right, bottom, left):
 rate = 0
 for index, name in enumerate(source_bordered_files):
     im = converted(join(SOURCE_BORDERED_PATH, name))
-    has, crop, sides, meds = detect(im)
+
+    meds, _ = detect(im)
     outline(im, *meds)
+
     im.save(join(DETECTED_BORDERED_PATH, name))
     im.close()
-    rate += int(has)
-    print(index, name, has, meds)
+
+    rate += int(any(meds))
+    print(index, name, meds)
+
 print(rate / len(source_bordered_files))
 
 # Process clear images
 rate = 0
 for index, name in enumerate(source_clear_files):
     im = converted(join(SOURCE_CLEAR_PATH, name))
-    has, crop, sides, meds = detect(im)
+
+    meds, _ = detect(im)
     outline(im, *meds)
+
     im.save(join(DETECTED_CLEAR_PATH, name))
     im.close()
-    rate += int(has)
-    print(index, name, has, meds)
+
+    rate += int(any(meds))
+    print(index, name, meds)
+
 print(rate / len(source_clear_files))

@@ -10,10 +10,10 @@ providing approximate whitespace offsets for every side of a picture.
 For each side of the image starting from the top, clockwise:
 - Get upper block with 25% height of the dimension opposite to current side
 - Get lower block with the same height as the upper one (50% of image total)
-- Calculate their entropy for the both blocks
+- Calculate entropy for both blocks
 - Find their entropies difference
 - Make upper block 1px less
-- Repeat from p.2 until we hit image side
+- Repeat from p.2 until we hit image edge
 - Get maximum (minimum) of the entropies difference
 - Here we have a border center if it lies closer to the edge rather than to the 
 center of image and entropies difference is lower than pre-set median
@@ -77,5 +77,6 @@ rate for clear images is 7%
 
 ## Performance
 
-With current settings one image is getting processed within 1-3 seconds on
-Intel® Pentium(R) CPU 2117U @ 1.80GHz × 2 with 4 Gb RAM
+With current settings one image is getting processed within 4-5 seconds for
+non-iterative mode and 5-15 seconds for iterative mode on Intel® Pentium(R) CPU
+2117U @ 1.80GHz × 2 with 4 Gb RAM
