@@ -1,5 +1,6 @@
 from os import listdir
 from os.path import join, isfile
+import operator
 
 from PIL import Image, ImageDraw
 import numpy as np
@@ -7,6 +8,7 @@ import numpy as np
 
 IMAGE_SIZE = 300    # Resize minimum side of image to this with aspect ratio
 CONVERT_MODE = 'L'  # Grayscale (default)
+SIDE_COUNT = 4
 
 SOURCE_CLEAR_PATH = './images/source/clear'         # Sources without border
 SOURCE_BORDERED_PATH = './images/source/bordered'   # Bordered sources
@@ -53,64 +55,62 @@ def entropy(signal):
     return np.sum([p * np.log2(1.0 / p) for p in propab])
 
 
-def scan(im):
+def scan(im, sides=None):
     """
     Scan if image has borders at the top, right, bottom and left
     """
-    w, h = im.size
-    array = np.array(im)
+    if sides is None:
+        sides = tuple(s for s in range(SIDE_COUNT))
 
-    # Top
-    center_ = 0
-    diff_ = MEDIAN
-    for center in reversed(range(1, h // 4 + 1)):
-        upper = entropy(array[0: center, 0: w].flatten())
-        lower = entropy(array[center: 2 * center, 0: w].flatten())
-        diff = upper / lower if lower != 0.0 else MEDIAN
-        if diff < diff_:
-            center_ = center
-            diff_ = diff
-    top = diff_ < MEDIAN and center_ < h // 4, center_, diff_
+    arr = np.array(im)
+    res = []
 
-    # Right
-    center_ = 0
-    diff_ = MEDIAN
-    for center in reversed(range(1, w // 4 + 1)):
-        upper = entropy(array[0: h, w - center: w].flatten())
-        lower = entropy(array[0: h, w - 2 * center: w - center].flatten())
-        diff = upper / lower if lower != 0.0 else MEDIAN
-        if diff < diff_:
-            center_ = center
-            diff_ = diff
-    right = diff_ < MEDIAN and center_ < w // 4, center_, diff_
+    for side in range(SIDE_COUNT):
+        if side not in sides:
+            res.append((False, 0, ))
+        else:
+            rot = np.rot90(arr, k=side)
+            h, w = rot.shape
 
-    # Bottom
-    center_ = 0
-    diff_ = MEDIAN
-    for center in reversed(range(1, h // 4 + 1)):
-        upper = entropy(array[h - center: h, 0: w].flatten())
-        lower = entropy(array[h - 2 * center: h - center, 0: w].flatten())
-        diff = upper / lower if lower != 0.0 else MEDIAN
-        if diff < diff_:
-            center_ = center
-            diff_ = diff
-    bottom = diff_ < MEDIAN and center_ < h // 4, center_, diff_
+            med = 0
+            delta = MEDIAN
+            for center in reversed(range(1, h // 4 + 1)):
+                upper = entropy(rot[0: center, 0: w].flatten())
+                lower = entropy(rot[center: 2 * center, 0: w].flatten())
+                diff = upper / lower if lower != 0.0 else MEDIAN
+                if diff < delta:
+                    med = center
+                    delta = diff
+            has = delta < MEDIAN and med < h // 4
+            res.append((has, med, ))
 
-    # Left
-    center_ = 0
-    diff_ = MEDIAN
-    for center in reversed(range(1, w // 4 + 1)):
-        upper = entropy(array[0: h, 0: center].flatten())
-        lower = entropy(array[0: h, center: 2 * center].flatten())
-        diff = upper / lower if lower != 0.0 else MEDIAN
-        if diff < diff_:
-            center_ = center
-            diff_ = diff
-    left = diff_ < MEDIAN and center_ < w // 4, center_, diff_
+    # Results
+    has = any(tuple(res[s][0] for s in range(SIDE_COUNT)))
 
-    # Return tuple of tuples each contains detection flag, border location
-    # and maximum (actually minimum) difference between two entropies
-    return top, right, bottom, left
+    left = res[3][1] - 1 if res[3][0] else 0
+    upper = res[0][1] - 1 if res[0][0] else 0
+    right = im.size[0] - res[1][1] - 1 if res[1][0] else im.size[0] - 1
+    lower = im.size[1] - res[2][1] - 1 if res[2][0] else im.size[1] - 1
+    im = im.crop((left, upper, right, lower, ))
+
+    sides = tuple(s for s in range(SIDE_COUNT) if res[s][0])
+    meds = tuple(res[s][1] if res[s][0] else 0 for s in range(SIDE_COUNT))
+
+    return has, im, sides, meds
+
+
+def detect(im):
+    has = True
+    sides = None
+    meds = (0, 0, 0, 0, )
+    while True:
+        has, crop, sides, adds = scan(im, sides=sides)
+        if not has:
+            break
+        im = crop
+        meds = tuple(map(operator.add, meds, adds))
+
+    return has, im, sides, meds
 
 
 def outline(im, top, right, bottom, left):
@@ -143,26 +143,22 @@ def outline(im, top, right, bottom, left):
 rate = 0
 for index, name in enumerate(source_bordered_files):
     im = converted(join(SOURCE_BORDERED_PATH, name))
-    res = scan(im)
-    outline(im, *tuple(res[i][1] if res[i][0] else None for i in range(4)))
+    has, crop, sides, meds = detect(im)
+    outline(im, *meds)
     im.save(join(DETECTED_BORDERED_PATH, name))
     im.close()
-
-    print(index, name, res)
-
-    rate += int(any(tuple(res[i][0] for i in range(4))))
+    rate += int(has)
+    print(index, name, has, meds)
 print(rate / len(source_bordered_files))
 
 # Process clear images
 rate = 0
 for index, name in enumerate(source_clear_files):
     im = converted(join(SOURCE_CLEAR_PATH, name))
-    res = scan(im)
-    outline(im, *tuple(res[i][1] if res[i][0] else None for i in range(4)))
+    has, crop, sides, meds = detect(im)
+    outline(im, *meds)
     im.save(join(DETECTED_CLEAR_PATH, name))
     im.close()
-
-    print(index, name, res)
-
-    rate += int(any(tuple(res[i][0] for i in range(4))))
+    rate += int(has)
+    print(index, name, has, meds)
 print(rate / len(source_clear_files))
