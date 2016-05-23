@@ -61,8 +61,8 @@ python enimda.py
 
 ## Examples
 
-Within the **source** folder you will find source images - with border (bordered)
-and without (clear)
+Within the images folder in **source** folder you will find source images - with
+border (bordered) and without (clear)
 
 In the **detected** folder there are the results of source images processing - 
 each image has its borders outlined for visual demonstration
