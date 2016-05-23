@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 
-IMAGE_SIZE = 500    # Resize minimum side of image to this with aspect ratio
+IMAGE_SIZE = 300    # Resize minimum side of image to this with aspect ratio
 CONVERT_MODE = 'L'  # Grayscale (default)
 
 SOURCE_CLEAR_PATH = './images/source/clear'         # Sources without border

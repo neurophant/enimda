@@ -7,7 +7,7 @@ providing approximate whitespace offsets for every side of a picture.
 
 ## Algorithm
 
-For each side of the image strating from top, clockwise:
+For each side of the image starting from the top, clockwise:
 - Get upper block with 25% height of the dimension opposite to current side
 - Get lower block with the same height as the upper one (50% of image total)
 - Calculate their entropy for the both blocks
@@ -70,11 +70,12 @@ each image has its borders outlined for visual demonstration
 
 ## Accuracy
 
-Using included examples and current median value (0.5), detection rate for
-bordered images is 81%, false detection rate for clear images is 8%
+Using included examples each resized to 300px for its minimal side and current
+median value (0.5), detection rate for  bordered images is 82%, false detection
+rate for clear images is 7%
 
 
 ## Performance
 
-With current settings one image is getting processed within 10-20 seconds on
+With current settings one image is getting processed within 1-3 seconds on
 Intel® Pentium(R) CPU 2117U @ 1.80GHz × 2 with 4 Gb RAM
