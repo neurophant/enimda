@@ -6,22 +6,12 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 
-IMAGE_SIZE = 300    # Resize min side of image to this one keeping aspect ratio
-CONVERT_MODE = 'L'  # Grayscale mode (default)
-SIDE_COUNT = 4      # Count of image sides
-
 SOURCE_CLEAR_PATH = './images/source/clear'         # Sources without border
 SOURCE_BORDERED_PATH = './images/source/bordered'   # Bordered sources
 
 DETECTED_CLEAR_PATH = './images/detected/clear'         # No border results
 DETECTED_BORDERED_PATH = './images/detected/bordered'   # Bordered results
 
-# If upper entropy divided by lower entropy is lower than this - assume that
-# image has border on the particular side
-# Make it lower to exclude monotone cases and higher to crop every image which
-# has real content
-THRESHOLD = 0.5
-INDENT = 0.25
 
 # Source files - clear and bordered, sorted alphabetically
 source_clear_files = sorted(_ for _ in listdir(SOURCE_CLEAR_PATH)
@@ -30,161 +20,185 @@ source_bordered_files = sorted(_ for _ in listdir(SOURCE_BORDERED_PATH)
                                if isfile(join(SOURCE_BORDERED_PATH, _)))
 
 
-def converted(path, resize=True):
-    """
-    Get PIL image converted to pre-set mode and size keeping its original
-    aspect ratio
-    """
-    im = Image.open(path)
-    im = im.convert(CONVERT_MODE)
+class ENIMDA:
+    __SIDE_COUNT = 4
 
-    if resize:
-        w, h = im.size
-        w, h = (int(IMAGE_SIZE * w / h), IMAGE_SIZE, ) if w > h\
-            else (IMAGE_SIZE, int(IMAGE_SIZE * h / w), )
-        im = im.resize((w, h))
+    __image = None
+    __threshold = None
+    __indent = None
 
-    return im
+    __borders = None
 
+    def __init__(self, *, path=None, mode='L', resize=None):
+        self.__image = Image.open(path).convert(mode)
 
-def entropy(signal):
-    """
-    Calculate entropy for 1D numpy array
-    """
-    signal = np.array(signal)
-    propab = [np.size(signal[signal == i]) / (1.0 * signal.size)
-              for i in list(set(signal))]
+        if resize is not None:
+            w, h = self.__image.size
+            w, h = (int(resize * w / h), resize, ) if w > h\
+                else (resize, int(resize * h / w), )
+            self.__image = self.__image.resize((w, h))
 
-    return np.sum([p * np.log2(1.0 / p) for p in propab])
+        return
 
+    def __entropy(self, *, signal=None):
+        """
+        Calculate entropy for 1D numpy array
+        """
+        signal = np.array(signal)
+        propab = [np.size(signal[signal == i]) / (1.0 * signal.size)
+                  for i in list(set(signal))]
 
-def scan(im):
-    """
-    Scan if image has borders at the top, right, bottom and left
-    """
-    arr = np.array(im)
-    meds = []
+        return np.sum([p * np.log2(1.0 / p) for p in propab])
 
-    for side in range(SIDE_COUNT):
-        # Rotate array counter-clockwise to keep side of interest on top
-        rot = np.rot90(arr, k=side)
-        h, w = rot.shape    # Array size
+    def scan(self, threshold=None, indent=None):
+        """
+        Scan if image has borders at the top, right, bottom and left
+        """
+        arr = np.array(self.__image)
+        borders = []
 
-        med = 0
-        delta = THRESHOLD
-        for center in reversed(range(1, int(INDENT * h) + 1)):
-            upper = entropy(rot[0: center, 0: w].flatten())
+        for side in range(self.__SIDE_COUNT):
+            # Rotate array counter-clockwise to keep side of interest on top
+            rot = np.rot90(arr, k=side)
+            h, w = rot.shape    # Array size
 
-            if upper == 0.0:
-                med = center
+            border = 0
+            delta = threshold
+            for center in reversed(range(1, int(indent * h) + 1)):
+                upper = self.__entropy(signal=rot[0: center, 0: w].flatten())
+
+                if upper == 0.0:
+                    border = center
+                    break
+
+                lower = self.__entropy(
+                    signal=rot[center: 2 * center, 0: w].flatten())
+                diff = upper / lower if lower != 0.0 else delta
+
+                if diff < delta and diff < threshold:
+                    border = center
+                    delta = diff
+
+            borders.append(border)
+
+        self.__borders = tuple(borders)
+
+        return
+
+    def detect(self, threshold=None, indent=None):
+        """
+        Iterative border detection
+        """
+        w, h = self.__image.size
+        image = self.__image
+        borders = (0, 0, 0, 0, )
+
+        while True:
+            self.scan(threshold=threshold, indent=indent)
+
+            if not any(self.__borders):
                 break
 
-            lower = entropy(rot[center: 2 * center, 0: w].flatten())
-            diff = upper / lower if lower != 0.0 else delta
+            borders = tuple(map(operator.add, borders, self.__borders))
+            self.__crop()
 
-            if diff < delta and diff < THRESHOLD:
-                med = center
-                delta = diff
+        self.__image = image
+        self.__borders = (
+            borders[0] if borders[0] < int(indent * h) else 0,
+            borders[1] if borders[1] < int(indent * w) else 0,
+            borders[2] if borders[2] < int(indent * h) else 0,
+            borders[3] if borders[3] < int(indent * w) else 0, )
 
-        meds.append(med)
+        return
 
-    # Border offsets and cropped image
-    # If calculated offset is 0 - use original size
-    w, h = im.size
-    left = meds[3]
-    upper = meds[0]
-    right = w - 1 - meds[1]
-    lower = h - 1 - meds[2]
-    im = im.crop((left, upper, right, lower, ))
+    @property
+    def borders(self):
+        return self.__borders
 
-    return meds, im
+    @property
+    def has_borders(self):
+        return any(self.__borders)
 
+    def __outline(self):
+        """
+        Draw cut-lines
+        """
+        w, h = self.__image.size
+        draw = ImageDraw.Draw(self.__image)
 
-def detect(im, iterative=True):
-    """
-    Iterative border detection
-    iterative=True - find border offsets with high precision (slow)
-    iterative=False - detect if image has any borders (fast)
-    """
-    w, h = im.size
-    meds = (0, 0, 0, 0, )
+        if self.__borders[0] > 0:
+            draw.line(((0, self.__borders[0] + 1, ),
+                       (w - 1, self.__borders[0] + 1, ), ), fill=0, width=3)
+            draw.line(((0, self.__borders[0] + 1, ),
+                       (w - 1, self.__borders[0] + 1, ), ), fill=255, width=1)
 
-    while True:
-        adds, crop = scan(im)
+        if self.__borders[1] > 0:
+            draw.line(((w - 2 - self.__borders[1], 0, ),
+                       (w - 2 - self.__borders[1], h - 1, ), ),
+                      fill=0, width=3)
+            draw.line(((w - 2 - self.__borders[1], 0, ),
+                       (w - 2 - self.__borders[1], h - 1, ), ),
+                      fill=255, width=1)
 
-        if not any(adds):
-            break
+        if self.__borders[2] > 0:
+            draw.line(((0, h - 2 - self.__borders[2], ),
+                       (w - 1, h - 2 - self.__borders[2], ), ),
+                      fill=0, width=3)
+            draw.line(((0, h - 2 - self.__borders[2], ),
+                       (w - 1, h - 2 - self.__borders[2], ), ),
+                      fill=255, width=1)
 
-        im = crop
-        meds = tuple(map(operator.add, meds, adds))
+        if self.__borders[3] > 0:
+            draw.line(((self.__borders[3] + 1, 0, ),
+                       (self.__borders[3] + 1, h - 1, ), ), fill=0, width=3)
+            draw.line(((self.__borders[3] + 1, 0, ),
+                       (self.__borders[3] + 1, h - 1, ), ), fill=255, width=1)
 
-        if not iterative:
-            break
+        return
 
-    return (meds[0] if meds[0] < int(INDENT * h) else 0,
-            meds[1] if meds[1] < int(INDENT * w) else 0,
-            meds[2] if meds[2] < int(INDENT * h) else 0,
-            meds[3] if meds[3] < int(INDENT * w) else 0), im
+    def __crop(self):
+        """
+        Border offsets and cropped image
+        If calculated offset is 0 - use original size
+        """
+        w, h = self.__image.size
+        left = self.__borders[3]
+        upper = self.__borders[0]
+        right = w - 1 - self.__borders[1]
+        lower = h - 1 - self.__borders[2]
+        self.__image = self.__image.crop((left, upper, right, lower, ))
 
+        return
 
-def outline(im, top, right, bottom, left):
-    """
-    Draw cut-lines
-    """
-    w, h = im.size
-    draw = ImageDraw.Draw(im)
+    def save(self, *, path=None, outline=False, crop=False):
+        if outline:
+            self.__outline()
+        if crop:
+            self.__crop()
 
-    if top > 0:
-        draw.line(((0, top + 1, ), (w - 1, top + 1, ), ), fill=0, width=3)
-        draw.line(((0, top + 1, ), (w - 1, top + 1, ), ), fill=255, width=1)
+        self.__image.save(path)
 
-    if right > 0:
-        draw.line(((w - 2 - right, 0, ), (w - 2 - right, h - 1, ), ), fill=0,
-                  width=3)
-        draw.line(((w - 2 - right, 0, ), (w - 2 - right, h - 1, ), ), fill=255,
-                  width=1)
-
-    if bottom > 0:
-        draw.line(((0, h - 2 - bottom, ), (w - 1, h - 2 - bottom, ), ), fill=0,
-                  width=3)
-        draw.line(((0, h - 2 - bottom, ), (w - 1, h - 2 - bottom, ), ),
-                  fill=255, width=1)
-
-    if left > 0:
-        draw.line(((left + 1, 0, ), (left + 1, h - 1, ), ), fill=0, width=3)
-        draw.line(((left + 1, 0, ), (left + 1, h - 1, ), ), fill=255, width=1)
-
-    return
+        return
 
 
 # Process bordered images
 rate = 0
 for index, name in enumerate(source_bordered_files):
-    im = converted(join(SOURCE_BORDERED_PATH, name))
-
-    meds, _ = detect(im)
-    outline(im, *meds)
-
-    im.save(join(DETECTED_BORDERED_PATH, name))
-    im.close()
-
-    rate += int(any(meds))
-    print(index, name, meds)
+    image = ENIMDA(path=join(SOURCE_BORDERED_PATH, name), mode='L', resize=300)
+    image.detect(threshold=0.5, indent=0.25)
+    rate += int(image.has_borders)
+    image.save(path=join(DETECTED_BORDERED_PATH, name), outline=True)
+    print(index, name, image.has_borders, image.borders)
 
 print(rate / len(source_bordered_files))
 
 # Process clear images
 rate = 0
 for index, name in enumerate(source_clear_files):
-    im = converted(join(SOURCE_CLEAR_PATH, name))
-
-    meds, _ = detect(im)
-    outline(im, *meds)
-
-    im.save(join(DETECTED_CLEAR_PATH, name))
-    im.close()
-
-    rate += int(any(meds))
-    print(index, name, meds)
+    image = ENIMDA(path=join(SOURCE_CLEAR_PATH, name), mode='L', resize=300)
+    image.detect(threshold=0.5, indent=0.25)
+    rate += int(image.has_borders)
+    image.save(path=join(DETECTED_CLEAR_PATH, name), outline=True)
+    print(index, name, image.has_borders, image.borders)
 
 print(rate / len(source_clear_files))
