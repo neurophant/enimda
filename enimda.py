@@ -50,7 +50,7 @@ class ENIMDA:
 
         return np.sum([p * np.log2(1.0 / p) for p in propab])
 
-    def scan(self, threshold=None, indent=None):
+    def scan(self, *, threshold=None, indent=None):
         """
         Scan if image has borders at the top, right, bottom and left
         """
@@ -85,7 +85,7 @@ class ENIMDA:
 
         return
 
-    def detect(self, threshold=None, indent=None):
+    def detect(self, *, threshold=None, indent=None):
         """
         Iterative border detection
         """
@@ -185,7 +185,7 @@ class ENIMDA:
 rate = 0
 for index, name in enumerate(source_bordered_files):
     image = ENIMDA(path=join(SOURCE_BORDERED_PATH, name), mode='L', resize=300)
-    image.detect(threshold=0.5, indent=0.25)
+    image.scan(threshold=0.5, indent=0.25)
     rate += int(image.has_borders)
     image.save(path=join(DETECTED_BORDERED_PATH, name), outline=True)
     print(index, name, image.has_borders, image.borders)
@@ -196,7 +196,7 @@ print(rate / len(source_bordered_files))
 rate = 0
 for index, name in enumerate(source_clear_files):
     image = ENIMDA(path=join(SOURCE_CLEAR_PATH, name), mode='L', resize=300)
-    image.detect(threshold=0.5, indent=0.25)
+    image.scan(threshold=0.5, indent=0.25)
     rate += int(image.has_borders)
     image.save(path=join(DETECTED_CLEAR_PATH, name), outline=True)
     print(index, name, image.has_borders, image.borders)
