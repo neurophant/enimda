@@ -20,8 +20,8 @@ DETECTED_BORDERED_PATH = './images/detected/bordered'   # Bordered results
 # image has border on the particular side
 # Make it lower to exclude monotone cases and higher to crop every image which
 # has real content
-MEDIAN = 0.5
-
+THRESHOLD = 0.5
+INDENT = 0.25
 
 # Source files - clear and bordered, sorted alphabetically
 source_clear_files = sorted(_ for _ in listdir(SOURCE_CLEAR_PATH)
@@ -30,7 +30,7 @@ source_bordered_files = sorted(_ for _ in listdir(SOURCE_BORDERED_PATH)
                                if isfile(join(SOURCE_BORDERED_PATH, _)))
 
 
-def converted(path):
+def converted(path, resize=True):
     """
     Get PIL image converted to pre-set mode and size keeping its original
     aspect ratio
@@ -38,10 +38,11 @@ def converted(path):
     im = Image.open(path)
     im = im.convert(CONVERT_MODE)
 
-    w, h = im.size
-    w, h = (int(IMAGE_SIZE * w / h), IMAGE_SIZE, ) if w > h\
-        else (IMAGE_SIZE, int(IMAGE_SIZE * h / w), )
-    im = im.resize((w, h))
+    if resize:
+        w, h = im.size
+        w, h = (int(IMAGE_SIZE * w / h), IMAGE_SIZE, ) if w > h\
+            else (IMAGE_SIZE, int(IMAGE_SIZE * h / w), )
+        im = im.resize((w, h))
 
     return im
 
@@ -70,8 +71,8 @@ def scan(im):
         h, w = rot.shape    # Array size
 
         med = 0
-        delta = MEDIAN
-        for center in reversed(range(1, h // 4 + 1)):
+        delta = THRESHOLD
+        for center in reversed(range(1, int(INDENT * h) + 1)):
             upper = entropy(rot[0: center, 0: w].flatten())
 
             if upper == 0.0:
@@ -81,7 +82,7 @@ def scan(im):
             lower = entropy(rot[center: 2 * center, 0: w].flatten())
             diff = upper / lower if lower != 0.0 else delta
 
-            if diff < delta and diff < MEDIAN:
+            if diff < delta and diff < THRESHOLD:
                 med = center
                 delta = diff
 
@@ -99,7 +100,7 @@ def scan(im):
     return meds, im
 
 
-def detect(im, iterative=False):
+def detect(im, iterative=True):
     """
     Iterative border detection
     iterative=True - find border offsets with high precision (slow)
@@ -120,10 +121,10 @@ def detect(im, iterative=False):
         if not iterative:
             break
 
-    return (meds[0] if meds[0] < h // 4 else 0,
-            meds[1] if meds[1] < w // 4 else 0,
-            meds[2] if meds[2] < h // 4 else 0,
-            meds[3] if meds[3] < w // 4 else 0), im
+    return (meds[0] if meds[0] < int(INDENT * h) else 0,
+            meds[1] if meds[1] < int(INDENT * w) else 0,
+            meds[2] if meds[2] < int(INDENT * h) else 0,
+            meds[3] if meds[3] < int(INDENT * w) else 0), im
 
 
 def outline(im, top, right, bottom, left):
