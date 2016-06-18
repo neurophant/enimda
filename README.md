@@ -55,7 +55,7 @@ pip install -r requirements.txt
 ## Run
 
 ```
-python enimda.py
+python app.py
 ```
 
 
