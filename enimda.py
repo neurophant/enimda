@@ -1,23 +1,7 @@
-from os import listdir
-from os.path import join, isfile
 import operator
 
 from PIL import Image, ImageDraw
 import numpy as np
-
-
-SOURCE_CLEAR_PATH = './images/source/clear'         # Sources without border
-SOURCE_BORDERED_PATH = './images/source/bordered'   # Bordered sources
-
-DETECTED_CLEAR_PATH = './images/detected/clear'         # No border results
-DETECTED_BORDERED_PATH = './images/detected/bordered'   # Bordered results
-
-
-# Source files - clear and bordered, sorted alphabetically
-source_clear_files = sorted(_ for _ in listdir(SOURCE_CLEAR_PATH)
-                            if isfile(join(SOURCE_CLEAR_PATH, _)))
-source_bordered_files = sorted(_ for _ in listdir(SOURCE_BORDERED_PATH)
-                               if isfile(join(SOURCE_BORDERED_PATH, _)))
 
 
 class ENIMDA:
@@ -30,6 +14,9 @@ class ENIMDA:
     __borders = None
 
     def __init__(self, *, path=None, mode='L', resize=None):
+        """
+        Preprocess image for further manipulations
+        """
         self.__image = Image.open(path).convert(mode)
 
         if resize is not None:
@@ -52,7 +39,7 @@ class ENIMDA:
 
     def scan(self, *, threshold=None, indent=None):
         """
-        Scan if image has borders at the top, right, bottom and left
+        Scan if image has any borders
         """
         arr = np.array(self.__image)
         borders = []
@@ -87,10 +74,10 @@ class ENIMDA:
 
     def detect(self, *, threshold=None, indent=None):
         """
-        Iterative border detection
+        Precision border detection
         """
-        w, h = self.__image.size
         image = self.__image
+        w, h = image.size
         borders = (0, 0, 0, 0, )
 
         while True:
@@ -179,26 +166,3 @@ class ENIMDA:
         self.__image.save(path)
 
         return
-
-
-# Process bordered images
-rate = 0
-for index, name in enumerate(source_bordered_files):
-    image = ENIMDA(path=join(SOURCE_BORDERED_PATH, name), mode='L', resize=300)
-    image.scan(threshold=0.5, indent=0.25)
-    rate += int(image.has_borders)
-    image.save(path=join(DETECTED_BORDERED_PATH, name), outline=True)
-    print(index, name, image.has_borders, image.borders)
-
-print(rate / len(source_bordered_files))
-
-# Process clear images
-rate = 0
-for index, name in enumerate(source_clear_files):
-    image = ENIMDA(path=join(SOURCE_CLEAR_PATH, name), mode='L', resize=300)
-    image.scan(threshold=0.5, indent=0.25)
-    rate += int(image.has_borders)
-    image.save(path=join(DETECTED_CLEAR_PATH, name), outline=True)
-    print(index, name, image.has_borders, image.borders)
-
-print(rate / len(source_clear_files))
