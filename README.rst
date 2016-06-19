@@ -63,3 +63,8 @@ Detect borders with high precision (iterative):
     image.save(path='test-outlined.jpg', outline=True)
     # Print found image borders (tuple)
     print(image.borders)
+
+Demo
+----
+
+For demonstration please refer to [ENIMDA Demo](http://github.com/embali/enimda-demo/)
