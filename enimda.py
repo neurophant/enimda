@@ -4,6 +4,12 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 
+__author__ = 'Anton Smolin'
+__copyright__ = 'Copyright (C) 2016 Anton Smolin'
+__license__ = 'MIT'
+__version__ = '1.0.0b1'
+
+
 class ENIMDA:
     __SIDE_COUNT = 4
 
