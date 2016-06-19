@@ -1,25 +1,21 @@
 ENIMDA
 ======
 
-ENtropy-based IMage border Detection Algorithm: finds out if your image has
-borders or whitespaces around and helps you to trim border from your image by
-providing approximate whitespace offsets for every side of a picture.
+ENtropy-based IMage border Detection Algorithm: finds out if your image has borders or whitespaces around and helps you to trim border providing whitespace offsets for every side of a picture.
 
 Algorithm
 ---------
 
 For each side of the image starting from the top, clockwise:
 
-* Get upper block with 25% height (indent) of the dimension opposite to current
-side
+* Get upper block with 25% height (indent) of the dimension opposite to current side
 * Get lower block with the same height as the upper one (50% of image total)
 * Calculate entropy for both blocks
 * Find their entropies difference
 * Make upper block 1px less
 * Repeat from p.2 until we hit image edge
 * Get maximum (minimum) of the entropies difference
-* Here we have a border center if it lies closer to the edge rather than to the 
-center of image and entropies difference is lower than pre-set threshold
+* Here we have a border center if it lies closer to the edge rather than to the center of image and entropies difference is lower than pre-set threshold
 
 Usage
 -----
