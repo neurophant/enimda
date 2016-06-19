@@ -67,4 +67,4 @@ Detect borders with high precision (iterative):
 Demo
 ----
 
-For demonstration please refer to [ENIMDA Demo](http://github.com/embali/enimda-demo/)
+For demonstration please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
