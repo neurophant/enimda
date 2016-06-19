@@ -17,6 +17,18 @@ For each side of the image starting from the top, clockwise:
 * Get maximum (minimum) of the entropies difference
 * Here we have a border center if it lies closer to the edge rather than to the center of image and entropies difference is lower than pre-set threshold
 
+Requirements
+------------
+
+Python 3.5+
+
+Setup
+-----
+
+.. code-block:: bash
+    
+    pip install enimda
+
 Usage
 -----
 
