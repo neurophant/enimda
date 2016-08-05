@@ -10,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='enimda',
-    version='1.0.0b3',
+    version='1.0.0b4',
     description='Entropy-based image border detection algorithm',
     long_description=long_description,
     url='https://github.com/embali/enimda/',

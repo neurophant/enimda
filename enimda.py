@@ -7,28 +7,25 @@ import numpy as np
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.0.0b3'
+__version__ = '1.0.0b4'
 
 
 class ENIMDA:
     __SIDE_COUNT = 4
 
     __image = None
-    __threshold = None
-    __indent = None
-
     __borders = None
 
-    def __init__(self, *, path=None, mode='L', resize=None):
+    def __init__(self, *, file_=None, mode='L', resize=None):
         """
         Preprocess image for further manipulations
         """
-        self.__image = Image.open(path).convert(mode)
+        self.__image = Image.open(file_).convert(mode)
 
         if resize is not None:
             w, h = self.__image.size
             w, h = (int(resize * w / h), resize, ) if w > h\
-                else (resize, int(resize * h / w), )
+                else (resize, int(resize * h / w))
             self.__image = self.__image.resize((w, h))
 
         return
@@ -84,7 +81,7 @@ class ENIMDA:
         """
         image = self.__image
         w, h = image.size
-        borders = (0, 0, 0, 0, )
+        borders = (0, 0, 0, 0)
 
         while True:
             self.scan(threshold=threshold, indent=indent)
@@ -100,7 +97,7 @@ class ENIMDA:
             borders[0] if borders[0] < int(indent * h) else 0,
             borders[1] if borders[1] < int(indent * w) else 0,
             borders[2] if borders[2] < int(indent * h) else 0,
-            borders[3] if borders[3] < int(indent * w) else 0, )
+            borders[3] if borders[3] < int(indent * w) else 0)
 
         return
 
@@ -120,32 +117,32 @@ class ENIMDA:
         draw = ImageDraw.Draw(self.__image)
 
         if self.__borders[0] > 0:
-            draw.line(((0, self.__borders[0] + 1, ),
-                       (w - 1, self.__borders[0] + 1, ), ), fill=0, width=3)
-            draw.line(((0, self.__borders[0] + 1, ),
-                       (w - 1, self.__borders[0] + 1, ), ), fill=255, width=1)
+            draw.line(((0, self.__borders[0] + 1),
+                       (w - 1, self.__borders[0] + 1)), fill=0, width=3)
+            draw.line(((0, self.__borders[0] + 1),
+                       (w - 1, self.__borders[0] + 1)), fill=255, width=1)
 
         if self.__borders[1] > 0:
-            draw.line(((w - 2 - self.__borders[1], 0, ),
-                       (w - 2 - self.__borders[1], h - 1, ), ),
+            draw.line(((w - 2 - self.__borders[1], 0),
+                       (w - 2 - self.__borders[1], h - 1)),
                       fill=0, width=3)
-            draw.line(((w - 2 - self.__borders[1], 0, ),
-                       (w - 2 - self.__borders[1], h - 1, ), ),
+            draw.line(((w - 2 - self.__borders[1], 0),
+                       (w - 2 - self.__borders[1], h - 1)),
                       fill=255, width=1)
 
         if self.__borders[2] > 0:
-            draw.line(((0, h - 2 - self.__borders[2], ),
-                       (w - 1, h - 2 - self.__borders[2], ), ),
+            draw.line(((0, h - 2 - self.__borders[2]),
+                       (w - 1, h - 2 - self.__borders[2])),
                       fill=0, width=3)
-            draw.line(((0, h - 2 - self.__borders[2], ),
-                       (w - 1, h - 2 - self.__borders[2], ), ),
+            draw.line(((0, h - 2 - self.__borders[2]),
+                       (w - 1, h - 2 - self.__borders[2])),
                       fill=255, width=1)
 
         if self.__borders[3] > 0:
-            draw.line(((self.__borders[3] + 1, 0, ),
-                       (self.__borders[3] + 1, h - 1, ), ), fill=0, width=3)
-            draw.line(((self.__borders[3] + 1, 0, ),
-                       (self.__borders[3] + 1, h - 1, ), ), fill=255, width=1)
+            draw.line(((self.__borders[3] + 1, 0),
+                       (self.__borders[3] + 1, h - 1)), fill=0, width=3)
+            draw.line(((self.__borders[3] + 1, 0),
+                       (self.__borders[3] + 1, h - 1)), fill=255, width=1)
 
         return
 
@@ -159,7 +156,7 @@ class ENIMDA:
         upper = self.__borders[0]
         right = w - 1 - self.__borders[1]
         lower = h - 1 - self.__borders[2]
-        self.__image = self.__image.crop((left, upper, right, lower, ))
+        self.__image = self.__image.crop((left, upper, right, lower))
 
         return
 
