@@ -160,12 +160,12 @@ class ENIMDA:
 
         return
 
-    def save(self, *, file_=None, outline=False, crop=False):
+    def save(self, *, file_=None, outline=False, crop=False, **kwargs):
         if outline:
             self.__outline()
         if crop:
             self.__crop()
 
-        self.__image.save(file_)
+        self.__image.save(file_, **kwargs)
 
         return
