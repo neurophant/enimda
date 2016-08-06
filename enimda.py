@@ -53,7 +53,7 @@ class ENIMDA:
         Preprocess it for further manipulations (mode, resize)
         """
         if image is not None:
-            self.__image = image
+            self.__image = image.convert(mode)
         else:
             self.__image = Image.open(file_).convert(mode)
 
