@@ -11,24 +11,62 @@ __version__ = '1.0.0b4'
 
 
 class ENIMDA:
-    __SIDE_COUNT = 4
+    __SIDE_COUNT = 4        # Top, right, bottom, left
 
-    __image = None
-    __borders = None
+    __image = None          # Pillow Image instance
+    __miltiplier = None     # How image size changed during resize
+    __borders = None        # Image borders tuple
 
-    def __init__(self, *, file_=None, mode='L', resize=None):
+    @property
+    def image(self):
         """
-        Preprocess image for further manipulations
+        Pillow Image instance
         """
-        self.__image = Image.open(file_).convert(mode)
+        return self.__image
 
-        if resize is not None:
+    @property
+    def multiplier(self):
+        """
+        Image multiplier
+        """
+        return self.__multiplier
+
+    @property
+    def has_borders(self):
+        """
+        Boolean flag which shows if image has any borders
+        """
+        return any(self.__borders)
+
+    @property
+    def borders(self):
+        """
+        Image borders tuple
+        """
+        return tuple(int(border * self.__multiplier)
+                     for border in self.__borders)
+
+    def __init__(self, *, image=None, file_=None, mode='L', resize=None):
+        """
+        Read image from file or buffer (file_)
+        Or load already read Pillow Image instance (image)
+        Preprocess it for further manipulations (mode, resize)
+        """
+        if image is not None:
+            self.__image = image
+        else:
+            self.__image = Image.open(file_).convert(mode)
+
+        if resize is None:
+            self.__multiplier = 1.0
+        else:
             w, h = self.__image.size
-            w, h = (int(resize * w / h), resize, ) if w > h\
-                else (resize, int(resize * h / w))
+            w, h, self.__multiplier = \
+                (int(resize * w / h), resize, h / resize) if w > h\
+                else (resize, int(resize * h / w), w / resize)
             self.__image = self.__image.resize((w, h))
 
-        return
+        return None
 
     def __entropy(self, *, signal=None):
         """
@@ -39,75 +77,6 @@ class ENIMDA:
                   for i in list(set(signal))]
 
         return np.sum([p * np.log2(1.0 / p) for p in propab])
-
-    def scan(self, *, threshold=None, indent=None):
-        """
-        Scan if image has any borders
-        """
-        arr = np.array(self.__image)
-        borders = []
-
-        for side in range(self.__SIDE_COUNT):
-            # Rotate array counter-clockwise to keep side of interest on top
-            rot = np.rot90(arr, k=side)
-            h, w = rot.shape    # Array size
-
-            border = 0
-            delta = threshold
-            for center in reversed(range(1, int(indent * h) + 1)):
-                upper = self.__entropy(signal=rot[0: center, 0: w].flatten())
-
-                if upper == 0.0:
-                    border = center
-                    break
-
-                lower = self.__entropy(
-                    signal=rot[center: 2 * center, 0: w].flatten())
-                diff = upper / lower if lower != 0.0 else delta
-
-                if diff < delta and diff < threshold:
-                    border = center
-                    delta = diff
-
-            borders.append(border)
-
-        self.__borders = tuple(borders)
-
-        return
-
-    def detect(self, *, threshold=None, indent=None):
-        """
-        Precision border detection
-        """
-        image = self.__image
-        w, h = image.size
-        borders = (0, 0, 0, 0)
-
-        while True:
-            self.scan(threshold=threshold, indent=indent)
-
-            if not any(self.__borders):
-                break
-
-            borders = tuple(map(operator.add, borders, self.__borders))
-            self.__crop()
-
-        self.__image = image
-        self.__borders = (
-            borders[0] if borders[0] < int(indent * h) else 0,
-            borders[1] if borders[1] < int(indent * w) else 0,
-            borders[2] if borders[2] < int(indent * h) else 0,
-            borders[3] if borders[3] < int(indent * w) else 0)
-
-        return
-
-    @property
-    def borders(self):
-        return self.__borders
-
-    @property
-    def has_borders(self):
-        return any(self.__borders)
 
     def __outline(self):
         """
@@ -144,7 +113,7 @@ class ENIMDA:
             draw.line(((self.__borders[3] + 1, 0),
                        (self.__borders[3] + 1, h - 1)), fill=255, width=1)
 
-        return
+        return None
 
     def __crop(self):
         """
@@ -158,9 +127,73 @@ class ENIMDA:
         lower = h - 1 - self.__borders[2]
         self.__image = self.__image.crop((left, upper, right, lower))
 
-        return
+        return None
+
+    def scan(self, *, threshold=None, indent=None):
+        """
+        Scan if image has any borders
+        """
+        arr = np.array(self.__image)
+        borders = []
+
+        for side in range(self.__SIDE_COUNT):
+            # Rotate array counter-clockwise to keep side of interest on top
+            rot = np.rot90(arr, k=side)
+            h, w = rot.shape    # Array size
+
+            border = 0
+            delta = threshold
+            for center in reversed(range(1, int(indent * h) + 1)):
+                upper = self.__entropy(signal=rot[0: center, 0: w].flatten())
+
+                if upper == 0.0:
+                    border = center
+                    break
+
+                lower = self.__entropy(
+                    signal=rot[center: 2 * center, 0: w].flatten())
+                diff = upper / lower if lower != 0.0 else delta
+
+                if diff < delta and diff < threshold:
+                    border = center
+                    delta = diff
+
+            borders.append(border)
+
+        self.__borders = tuple(borders)
+
+        return None
+
+    def detect(self, *, threshold=None, indent=None):
+        """
+        Precision border detection
+        """
+        image = self.__image
+        w, h = image.size
+        borders = (0, 0, 0, 0)
+
+        while True:
+            self.scan(threshold=threshold, indent=indent)
+
+            if not any(self.__borders):
+                break
+
+            borders = tuple(map(operator.add, borders, self.__borders))
+            self.__crop()
+
+        self.__image = image
+        self.__borders = (
+            borders[0] if borders[0] < int(indent * h) else 0,
+            borders[1] if borders[1] < int(indent * w) else 0,
+            borders[2] if borders[2] < int(indent * h) else 0,
+            borders[3] if borders[3] < int(indent * w) else 0)
+
+        return None
 
     def save(self, *, file_=None, outline=False, crop=False, **kwargs):
+        """
+        Save result image to file or buffer
+        """
         if outline:
             self.__outline()
         if crop:
@@ -168,4 +201,4 @@ class ENIMDA:
 
         self.__image.save(file_, **kwargs)
 
-        return
+        return None
