@@ -60,14 +60,14 @@ class ENIMDA:
                     upper = _entropy(
                         signal=rot[border: center, 0: w].flatten())
                     lower = _entropy(
-                        signal=rot[center: 2 * center, 0: w].flatten())
+                        signal=rot[center: 2 * center - border, 0: w].flatten())
                     diff = upper / lower if lower != 0.0 else delta
 
                     if diff < delta and diff < threshold:
                         subborder = center
                         delta = diff
 
-                if subborder == 0:
+                if subborder == 0 or border == subborder:
                     break
 
                 border = subborder
