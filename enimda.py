@@ -101,7 +101,7 @@ class ENIMDA:
                     fill = white
                 else:
                     fill = black
-                draw.point((i, self.__borders[0] + 1), fill=fill)
+                draw.point((i, self.__borders[0]), fill=fill)
 
         if self.__borders[1] > 0:
             for i in range(0, h):
@@ -109,7 +109,7 @@ class ENIMDA:
                     fill = white
                 else:
                     fill = black
-                draw.point((w - 2 - self.__borders[1], i), fill=fill)
+                draw.point((w - 1 - self.__borders[1], i), fill=fill)
 
         if self.__borders[2] > 0:
             for i in range(0, w):
@@ -117,7 +117,7 @@ class ENIMDA:
                     fill = white
                 else:
                     fill = black
-                draw.point((i, h - 2 - self.__borders[2]), fill=fill)
+                draw.point((i, h - 1 - self.__borders[2]), fill=fill)
 
         if self.__borders[3] > 0:
             for i in range(0, h):
@@ -125,7 +125,7 @@ class ENIMDA:
                     fill = white
                 else:
                     fill = black
-                draw.point((self.__borders[3] + 1, i), fill=fill)
+                draw.point((self.__borders[3], i), fill=fill)
 
         return None
 
@@ -134,10 +134,10 @@ class ENIMDA:
         Crop an image - cut all borders/whitespace
         """
         w, h = self.__initial.size
-        left = self.__borders[3] + 1 if self.__borders[3] > 0 else 0
-        upper = self.__borders[0] + 1 if self.__borders[0] > 0 else 0
-        right = w - 1 - self.__borders[1] if self.__borders[1] > 0 else w - 1
-        lower = h - 1 - self.__borders[2] if self.__borders[2] > 0 else h - 1
+        left = self.__borders[3]
+        upper = self.__borders[0]
+        right = w - self.__borders[1]
+        lower = h - self.__borders[2]
         self.__initial = self.__initial.crop((left, upper, right, lower))
 
         return None
