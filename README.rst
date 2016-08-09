@@ -36,33 +36,24 @@ Find if image has any borders:
 
 .. code-block:: python
 
-    from enimda import ENIMDA
-
-
-    # Open target image, convert it to grayscale and resize too 300 px
-    image = ENIMDA(file_='test.jpg', mode='L', resize=300)
-    # Scan for borders existence
-    image.scan(threshold=0.5, indent=0.25)
-    # Save image with outlined borders for demonstration
-    image.save(file_='test-outlined.jpg', outline=True)
-    # Print found image borders (tuple)
-    print(image.borders)
-
-Detect borders with high precision (iterative):
-
-.. code-block:: python
+    from PIL import Image
 
     from enimda import ENIMDA
 
 
-    # Open target image, convert it to grayscale and resize too 300 px
-    image = ENIMDA(file_='test.jpg', mode='L', resize=300)
-    # Detect borders
-    image.detect(threshold=0.5, indent=0.25)
+    # Load target image
+    im = Image.open('test.jpg')
+    em = ENIMDA(image=im)
+
+    # Scan for borders with high precision
+    em.scan(fast=False)
+
     # Save image with outlined borders for demonstration
-    image.save(file_='test-outlined.jpg', outline=True)
+    em.outline()
+    em.image.save('outlined.jpg')
+
     # Print found image borders (tuple)
-    print(image.borders)
+    print(em.borders)
 
 Demo
 ----

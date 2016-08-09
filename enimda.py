@@ -5,10 +5,10 @@ import numpy as np
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.0'
+__version__ = '1.1.0b'
 
 
-def entropy(*, signal=None):
+def _entropy(*, signal=None):
     """
     Calculate entropy for 1D numpy array
     """
@@ -49,7 +49,7 @@ class ENIMDA:
             while True:
                 # Find not-null starting point
                 for start in range(border + 1, int(indent * h) + 1):
-                    if entropy(
+                    if _entropy(
                             signal=rot[border: start, 0: w].flatten()) > 0.0:
                         break
 
@@ -57,8 +57,9 @@ class ENIMDA:
                 subborder = 0
                 delta = threshold
                 for center in reversed(range(start, int(indent * h) + 1)):
-                    upper = entropy(signal=rot[border: center, 0: w].flatten())
-                    lower = entropy(
+                    upper = _entropy(
+                        signal=rot[border: center, 0: w].flatten())
+                    lower = _entropy(
                         signal=rot[center: 2 * center, 0: w].flatten())
                     diff = upper / lower if lower != 0.0 else delta
 
