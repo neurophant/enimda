@@ -1,3 +1,5 @@
+from random import randint
+
 from PIL import Image, ImageDraw
 import numpy as np
 
@@ -12,7 +14,6 @@ def _entropy(*, signal=None):
     """
     Calculate entropy for 1D numpy array
     """
-    signal = np.array(signal)
     propab = [np.size(signal[signal == i]) / (1.0 * signal.size)
               for i in list(set(signal))]
 
@@ -33,16 +34,28 @@ class ENIMDA:
 
         return None
 
-    def scan(self, *, threshold=0.5, indent=0.25, fast=True):
+    def scan(self, *, threshold=0.5, indent=0.25, fast=True, rand=1.0):
         """
-        Find borders: fast or precise
+        Find borders:
+            - fast or precise: fast is only one iteration of possibly iterable
+              full scan
+            - use rand to use only random <rand> percent of columns to scan
         """
         arr = np.array(self.__converted)
         borders = []
+        rand = int(1.0 / rand) if 0.0 < rand < 1.0 else None
 
         for side in range(4):
             # Rotate array counter-clockwise to keep side of interest on top
             rot = np.rot90(arr, k=side)
+            # Skip some columns
+            if rand is not None:
+                arrs = []
+                for i in range(0, rot.shape[1] - rand, rand + 1):
+                    r = randint(i, i + rand)
+                    arrs.append(rot[0: rot.shape[0], r: r + 1])
+                rot = np.hstack(arrs)
+
             h, w = rot.shape    # Array size
 
             border = 0
@@ -60,7 +73,8 @@ class ENIMDA:
                     upper = _entropy(
                         signal=rot[border: center, 0: w].flatten())
                     lower = _entropy(
-                        signal=rot[center: 2 * center - border, 0: w].flatten())
+                        signal=rot[center: 2 * center - border, 0: w]
+                        .flatten())
                     diff = upper / lower if lower != 0.0 else delta
 
                     if diff < delta and diff < threshold:
