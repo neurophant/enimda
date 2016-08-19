@@ -1,7 +1,9 @@
 *.py[co]
 __pycache__
 .env
-requirements.txt
 build/
 dist/
 *.egg-info/
+htmlcov
+.coverage
+.cache

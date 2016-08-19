@@ -59,3 +59,8 @@ Demo
 ----
 
 For demonstration please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
+
+Tests
+-----
+
+Run tests: py.test

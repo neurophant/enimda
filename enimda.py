@@ -7,7 +7,7 @@ import numpy as np
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.0b'
+__version__ = '1.1.0'
 
 
 def _entropy(*, signal=None):
@@ -34,7 +34,7 @@ class ENIMDA:
 
         return None
 
-    def scan(self, *, threshold=0.5, indent=0.25, fast=True, rand=1.0):
+    def scan(self, *, threshold=0.5, indent=0.25, rand=1.0, fast=True):
         """
         Find borders:
             - fast or precise: fast is only one iteration of possibly iterable
@@ -45,19 +45,22 @@ class ENIMDA:
         borders = []
         rand = int(1.0 / rand) if 0.0 < rand < 1.0 else None
 
+        # For every side of an image
         for side in range(4):
             # Rotate array counter-clockwise to keep side of interest on top
             rot = np.rot90(arr, k=side)
+            h, w = rot.shape
+
             # Skip some columns
             if rand is not None:
                 arrs = []
-                for i in range(0, rot.shape[1] - rand, rand + 1):
+                for i in range(0, w - rand, rand + 1):
                     r = randint(i, i + rand)
-                    arrs.append(rot[0: rot.shape[0], r: r + 1])
+                    arrs.append(rot[0: h, r: r + 1])
                 rot = np.hstack(arrs)
+                h, w = rot.shape
 
-            h, w = rot.shape    # Array size
-
+            # Iterative detection
             border = 0
             while True:
                 # Find not-null starting point
@@ -111,34 +114,22 @@ class ENIMDA:
 
         if self.__borders[0] > 0:
             for i in range(0, w):
-                if i % 2 == 0:
-                    fill = white
-                else:
-                    fill = black
+                fill = white if i % 2 == 0 else black
                 draw.point((i, self.__borders[0]), fill=fill)
 
         if self.__borders[1] > 0:
             for i in range(0, h):
-                if i % 2 == 0:
-                    fill = white
-                else:
-                    fill = black
+                fill = white if i % 2 == 0 else black
                 draw.point((w - 1 - self.__borders[1], i), fill=fill)
 
         if self.__borders[2] > 0:
             for i in range(0, w):
-                if i % 2 == 0:
-                    fill = white
-                else:
-                    fill = black
+                fill = white if i % 2 == 0 else black
                 draw.point((i, h - 1 - self.__borders[2]), fill=fill)
 
         if self.__borders[3] > 0:
             for i in range(0, h):
-                if i % 2 == 0:
-                    fill = white
-                else:
-                    fill = black
+                fill = white if i % 2 == 0 else black
                 draw.point((self.__borders[3], i), fill=fill)
 
         return None
