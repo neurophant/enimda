@@ -90,7 +90,7 @@ class ENIMDA:
         """
         return any(self.borders)
 
-    def __init__(self, *, file_=None, minimize=None):
+    def __init__(self, *, file_=None, minimize=None, convert=True):
         """
         Load image
         """
@@ -118,10 +118,10 @@ class ENIMDA:
             if image.width > minimize or image.height > minimize:
                 if image.width > image.height:
                     width = minimize
-                    height = int(minimize * image.height / image.width)
+                    height = round(minimize * image.height / image.width)
                     self.__multiplier = image.width / width
                 elif image.width < image.height:
-                    width = int(minimize * image.width / image.height)
+                    width = round(minimize * image.width / image.height)
                     height = minimize
                     self.__multiplier = image.height / height
                 else:
@@ -148,7 +148,7 @@ class ENIMDA:
         """
         arr = np.array(self.__converted[frame])
         borders = []
-        stripes = int(1.0 / stripes) if 0.0 < stripes < 1.0 else None
+        stripes = round(1.0 / stripes) if 0.0 < stripes < 1.0 else None
 
         # For every side of an image
         for side in range(4):
@@ -169,7 +169,7 @@ class ENIMDA:
             border = 0
             while True:
                 # Find not-null starting point
-                for start in range(border + 1, int(indent * h) + 1):
+                for start in range(border + 1, round(indent * h) + 1):
                     if _entropy(
                             signal=rot[border: start, 0: w].flatten()) > 0.0:
                         break
@@ -177,7 +177,7 @@ class ENIMDA:
                 # Find sub-border
                 subborder = 0
                 delta = threshold
-                for center in reversed(range(start, int(indent * h) + 1)):
+                for center in reversed(range(start, round(indent * h) + 1)):
                     upper = _entropy(
                         signal=rot[border: center, 0: w].flatten())
                     lower = _entropy(
@@ -213,7 +213,7 @@ class ENIMDA:
               scan
         """
         borders = []
-        frames = int(1.0 / frames) if 0.0 < frames < 1.0 else None
+        frames = round(1.0 / frames) if 0.0 < frames < 1.0 else None
 
         if self.animated:
             if frames is not None:
