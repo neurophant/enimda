@@ -65,19 +65,12 @@ class ENIMDA:
         return self.__frames
 
     @property
-    def multiplier(self):
-        """
-        Multiplier property
-        """
-        return self.__multiplier
-
-    @property
     def borders(self):
         """
         Get borders (tuple)
         """
         return tuple(
-            round(self.multiplier *
+            round(self.__multiplier *
                   min(border[i] for border in self.__borders))
             for i in range(4))
 
@@ -96,7 +89,7 @@ class ENIMDA:
         self.__animated = 'loop' in image.info
 
         # Initial frames
-        if self.__animated:
+        if self.animated:
             self.__frames = 0
             self.__initial = []
             try:
