@@ -22,6 +22,9 @@ def _entropy(*, signal):
 
 
 def _ranges(*, count, paginate):
+    """
+    Get page-like ranges for random generation
+    """
     ranges_ = []
     pages = count // paginate
     remainder = count % paginate
@@ -35,6 +38,9 @@ def _ranges(*, count, paginate):
 
 
 class ENIMDA:
+    """
+    ENIMDA class
+    """
     __path = None
     __animated = False
     __frames = None
@@ -44,22 +50,42 @@ class ENIMDA:
     __borders = None
 
     @property
-    def multiplier(self):
-        return self.__multiplier
+    def animated(self):
+        """
+        Animated flag
+        """
+        return self.__animated
 
     @property
-    def has_borders(self):
+    def frames(self):
         """
-        Flag is true if image has any borders on any frame
+        Frame count
         """
-        return any(any(frame) for frame in self.__borders)
+        return self.__frames
+
+    @property
+    def multiplier(self):
+        """
+        Multiplier property
+        """
+        return self.__multiplier
 
     @property
     def borders(self):
         """
         Get borders (tuple)
         """
-        return self.__borders
+        return tuple(
+            round(self.multiplier *
+                  min(border[i] for border in self.__borders))
+            for i in range(4))
+
+    @property
+    def has_borders(self):
+        """
+        Flag is true if image has any borders on any frame
+        """
+        return any(self.borders)
 
     def __init__(self, *, path=None, minimize=None):
         """
@@ -67,6 +93,8 @@ class ENIMDA:
         """
         image = Image.open(path)
         self.__animated = 'loop' in image.info
+
+        # Initial frames
         if self.__animated:
             self.__frames = 0
             self.__initial = []
@@ -80,6 +108,7 @@ class ENIMDA:
         else:
             self.__initial = [image.copy()]
 
+        # If minimization required - recalculate multiplier and new size
         if minimize is not None:
             image = self.__initial[0]
             if image.width > minimize or image.height > minimize:
@@ -94,7 +123,10 @@ class ENIMDA:
                 else:
                     width = height = minimize
                     self.__multiplier = image.width / width
+            else:
+                width, height = image.width, image.height
 
+        # Converted frames
         self.__converted = []
         for frame in self.__initial:
             if minimize is not None:
@@ -169,6 +201,8 @@ class ENIMDA:
              fast=True):
         """
         Find borders for all frames:
+            - frames is used for animated images - logics is the same as
+              stripes
             - fast or precise: fast is only one iteration of possibly iterable
               full scan
             - use stripes to use only random <stripes> percent of columns to
@@ -177,15 +211,15 @@ class ENIMDA:
         borders = []
         frames = int(1.0 / frames) if 0.0 < frames < 1.0 else None
 
-        if self.__animated:
+        if self.animated:
             if frames is not None:
-                for i in _ranges(count=self.__frames, paginate=frames):
+                for i in _ranges(count=self.frames, paginate=frames):
                     r = randint(*i)
                     borders.append(self.__scan_frame(
                         frame=r, threshold=threshold, indent=indent,
                         stripes=stripes, fast=fast))
             else:
-                for r in range(self.__frames):
+                for r in range(self.frames):
                     borders.append(self.__scan_frame(
                         frame=r, threshold=threshold, indent=indent,
                         stripes=stripes, fast=fast))

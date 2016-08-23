@@ -8,26 +8,35 @@ from enimda import ENIMDA
 
 @pytest.fixture
 def fixed_bordered():
-    def func(*, resize=None):
+    def func(*, minimize=None):
         path = os.path.join(os.path.dirname(__file__), 'fixed/bordered.jpg')
-        em = ENIMDA(image=Image.open(path), resize=resize)
+        em = ENIMDA(path=path, minimize=minimize)
         return em
     return func
 
 
 @pytest.fixture
 def fixed_clear():
-    def func(*, resize=None):
+    def func(*, minimize=None):
         path = os.path.join(os.path.dirname(__file__), 'fixed/clear.jpg')
-        em = ENIMDA(image=Image.open(path), resize=resize)
+        em = ENIMDA(path=path, minimize=minimize)
         return em
     return func
 
 
 @pytest.fixture
-def anim_bordered():
+def anima_bordered():
     def func(*, minimize=None):
-        path = os.path.join(os.path.dirname(__file__), 'anim/bordered.gif')
+        path = os.path.join(os.path.dirname(__file__), 'anima/bordered.gif')
+        em = ENIMDA(path=path, minimize=minimize)
+        return em
+    return func
+
+
+@pytest.fixture
+def anima_clear():
+    def func(*, minimize=None):
+        path = os.path.join(os.path.dirname(__file__), 'anima/clear.gif')
         em = ENIMDA(path=path, minimize=minimize)
         return em
     return func
