@@ -1,7 +1,9 @@
 from copy import deepcopy
 from random import randint
+from io import BytesIO
 
 from PIL import Image, ImageDraw
+from wand.image import Image as WandImage
 import numpy as np
 
 
@@ -37,11 +39,18 @@ def _ranges(*, count, paginate):
     return tuple(ranges_)
 
 
+def _wand_path(*, file_):
+    if isinstance(file_, str):
+        return {'filename': file_}
+    else:
+        return {'file': file_}
+
+
 class ENIMDA:
     """
     ENIMDA class
     """
-    __path = None
+    __file = None
     __animated = False
     __frames = None
     __initial = None
@@ -85,6 +94,7 @@ class ENIMDA:
         """
         Load image
         """
+        self.__file = file_
         image = Image.open(file_)
         self.__animated = 'loop' in image.info
 
@@ -228,39 +238,37 @@ class ENIMDA:
         """
         Outline image borders with dotted lines
         """
-        self.__processed = deepcopy(self.__initial)
-
-        if self.__processed[0].mode in ('1', 'L', 'I', 'F'):
+        if self.__initial[0].mode in ('1', 'L', 'I', 'F', 'P'):
             black = 0
             white = 255
         else:
             black = (0, 0, 0)
             white = (255, 255, 255)
 
-        w, h = self.__processed[0].size
+        w, h = self.__initial[0].size
 
-        for frame in self.__processed:
-            draw = ImageDraw.Draw(frame)
+        self.__processed = self.__initial[0].copy()
+        draw = ImageDraw.Draw(self.__processed)
 
-            if self.borders[0] > 0:
-                for i in range(0, w):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((i, self.borders[0]), fill=fill)
+        if self.borders[0] > 0:
+            for i in range(0, w):
+                fill = white if i % 2 == 0 else black
+                draw.point((i, self.borders[0]), fill=fill)
 
-            if self.borders[1] > 0:
-                for i in range(0, h):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((w - 1 - self.borders[1], i), fill=fill)
+        if self.borders[1] > 0:
+            for i in range(0, h):
+                fill = white if i % 2 == 0 else black
+                draw.point((w - 1 - self.borders[1], i), fill=fill)
 
-            if self.borders[2] > 0:
-                for i in range(0, w):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((i, h - 1 - self.borders[2]), fill=fill)
+        if self.borders[2] > 0:
+            for i in range(0, w):
+                fill = white if i % 2 == 0 else black
+                draw.point((i, h - 1 - self.borders[2]), fill=fill)
 
-            if self.borders[3] > 0:
-                for i in range(0, h):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((self.borders[3], i), fill=fill)
+        if self.borders[3] > 0:
+            for i in range(0, h):
+                fill = white if i % 2 == 0 else black
+                draw.point((self.borders[3], i), fill=fill)
 
         return None
 
@@ -268,16 +276,18 @@ class ENIMDA:
         """
         Crop an image - cut all borders/whitespace
         """
-        self.__processed = deepcopy(self.__initial)
-
-        w, h = self.__processed[0].size
+        w, h = self.__initial[0].size
         left = self.borders[3]
         upper = self.borders[0]
         right = w - self.borders[1]
         lower = h - self.borders[2]
 
-        for index, frame in enumerate(self.__processed):
-            self.__processed[index] = frame.crop((left, upper, right, lower))
+        if self.__animated:
+            self.__processed = WandImage(**_wand_path(file_=self.__file))
+            self.__processed.crop(left, upper, right, lower)
+        else:
+            self.__processed = self.__initial[0].copy()\
+                .crop((left, upper, right, lower))
 
         return None
 
@@ -285,9 +295,9 @@ class ENIMDA:
         """
         Save an image
         """
-        if self.animated:
-            pass
-        else:
-            self.__processed[0].save(file_)
+        if isinstance(self.__processed, Image.Image):
+            self.__processed.save(file_)
+        elif isinstance(self.__processed, WandImage):
+            self.__processed.save(**_wand_path(file_=file_))
 
         return None
