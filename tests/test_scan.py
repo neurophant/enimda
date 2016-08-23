@@ -1,6 +1,6 @@
 import pytest
 
-"""
+
 @pytest.mark.parametrize('fast', (True, False))
 @pytest.mark.parametrize('resize', (None, 300))
 def test_bordered_partial(fixed_bordered, fast, resize):
@@ -23,10 +23,4 @@ def test_bordered_full(fixed_bordered, fast, resize):
 def test_clear(fixed_clear, fast, resize):
     em = fixed_clear(resize=resize)
     em.scan(rand=0.1, fast=fast)
-    assert em.has_borders == False
-"""
-
-def test_anim_clear(anim_bordered):
-    em = anim_bordered(minimize=100)
-    em.scan(rand=0.1, fast=True)
     assert em.has_borders == False

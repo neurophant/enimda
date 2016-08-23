@@ -11,7 +11,7 @@ __license__ = 'MIT'
 __version__ = '1.1.0'
 
 
-def _entropy(*, signal=None):
+def _entropy(*, signal):
     """
     Calculate entropy for 1D numpy array
     """
@@ -19,6 +19,19 @@ def _entropy(*, signal=None):
               for i in list(set(signal))]
 
     return np.sum([p * np.log2(1.0 / p) for p in propab])
+
+
+def _ranges(*, count, paginate):
+    ranges_ = []
+    pages = count // paginate
+    remainder = count % paginate
+    for page in range(pages):
+        ranges_.append((page * paginate, (page + 1) * paginate - 1))
+    if remainder:
+        ranges_.append((pages * paginate,
+                        pages * paginate + remainder - 1))
+
+    return tuple(ranges_)
 
 
 class ENIMDA:
@@ -29,6 +42,24 @@ class ENIMDA:
     __multiplier = 1.0
     __converted = None
     __borders = None
+
+    @property
+    def multiplier(self):
+        return self.__multiplier
+
+    @property
+    def has_borders(self):
+        """
+        Flag is true if image has any borders on any frame
+        """
+        return any(any(frame) for frame in self.__borders)
+
+    @property
+    def borders(self):
+        """
+        Get borders (tuple)
+        """
+        return self.__borders
 
     def __init__(self, *, path=None, minimize=None):
         """
@@ -55,11 +86,11 @@ class ENIMDA:
                 if image.width > image.height:
                     width = minimize
                     height = int(minimize * image.height / image.width)
-                    self.__multiplier = image.height / height
+                    self.__multiplier = image.width / width
                 elif image.width < image.height:
                     width = int(minimize * image.width / image.height)
                     height = minimize
-                    self.__multiplier = image.width / width
+                    self.__multiplier = image.height / height
                 else:
                     width = height = minimize
                     self.__multiplier = image.width / width
@@ -74,8 +105,8 @@ class ENIMDA:
 
         return None
 
-    def __frame(self, *, frame=0, threshold=0.5, indent=0.25, stripes=1.0,
-                fast=True):
+    def __scan_frame(self, *, frame=0, threshold=0.5, indent=0.25, stripes=1.0,
+                     fast=True):
         """
         Find borders for frame
         """
@@ -92,12 +123,8 @@ class ENIMDA:
             # Skip some columns
             if stripes is not None:
                 arrs = []
-                if w > stripes:
-                    for i in range(0, w - stripes, stripes + 1):
-                        r = randint(i, i + stripes)
-                        arrs.append(rot[0: h, r: r + 1])
-                else:
-                    r = randint(0, w - 1)
+                for i in _ranges(count=w, paginate=stripes):
+                    r = randint(*i)
                     arrs.append(rot[0: h, r: r + 1])
                 rot = np.hstack(arrs)
                 h, w = rot.shape
@@ -150,15 +177,24 @@ class ENIMDA:
         borders = []
         frames = int(1.0 / frames) if 0.0 < frames < 1.0 else None
 
-        # Skip some frames
-        if frames is not None:
-            arrs = []
-            if self.__frames > frames:
-                for i in range(0, self.__frames - frames, frames + 1):
-                    r = randint(i, i + frames)
+        if self.__animated:
+            if frames is not None:
+                for i in _ranges(count=self.__frames, paginate=frames):
+                    r = randint(*i)
+                    borders.append(self.__scan_frame(
+                        frame=r, threshold=threshold, indent=indent,
+                        stripes=stripes, fast=fast))
             else:
-                r = randint(0, self.__frames - 1)
-            rot = np.hstack(arrs)
+                for r in range(self.__frames):
+                    borders.append(self.__scan_frame(
+                        frame=r, threshold=threshold, indent=indent,
+                        stripes=stripes, fast=fast))
+        else:
+            borders.append(self.__scan_frame(
+                threshold=threshold, indent=indent, stripes=stripes,
+                fast=fast))
+
+        self.__borders = tuple(borders)
 
     def outline(self):
         """
@@ -208,24 +244,3 @@ class ENIMDA:
         self.__initial = self.__initial.crop((left, upper, right, lower))
 
         return None
-
-    @property
-    def has_borders(self):
-        """
-        Flag is true if image has any borders
-        """
-        return any(self.__borders)
-
-    @property
-    def borders(self):
-        """
-        Get borders (tuple)
-        """
-        return self.__borders
-
-    @property
-    def image(self):
-        """
-        Get initial outlined or cropped image
-        """
-        return self.__initial
