@@ -1,3 +1,4 @@
+from copy import deepcopy
 from random import randint
 
 from PIL import Image, ImageDraw
@@ -21,29 +22,66 @@ def _entropy(*, signal=None):
 
 
 class ENIMDA:
+    __path = None
+    __animated = False
+    __frames = None
     __initial = None
+    __multiplier = 1.0
     __converted = None
     __borders = None
 
-    def __init__(self, *, image=None):
+    def __init__(self, *, path=None, minimize=None):
         """
-        Load Pillow Image instance
+        Load image
         """
-        self.__initial = image.copy()
-        self.__converted = image.copy().convert('L')
+        image = Image.open(path)
+        self.__animated = 'loop' in image.info
+        if self.__animated:
+            self.__frames = 0
+            self.__initial = []
+            try:
+                while True:
+                    self.__frames += 1
+                    self.__initial.append(image.copy())
+                    image.seek(image.tell() + 1)
+            except EOFError:
+                pass
+        else:
+            self.__initial = [image.copy()]
+
+        if minimize is not None:
+            image = self.__initial[0]
+            if image.width > minimize or image.height > minimize:
+                if image.width > image.height:
+                    width = minimize
+                    height = int(minimize * image.height / image.width)
+                    self.__multiplier = image.height / height
+                elif image.width < image.height:
+                    width = int(minimize * image.width / image.height)
+                    height = minimize
+                    self.__multiplier = image.width / width
+                else:
+                    width = height = minimize
+                    self.__multiplier = image.width / width
+
+        self.__converted = []
+        for frame in self.__initial:
+            if minimize is not None:
+                self.__converted.append(
+                    frame.copy().resize((width, height)).convert('L'))
+            else:
+                self.__converted.append(frame.copy().convert('L'))
 
         return None
 
-    def scan(self, *, threshold=0.5, indent=0.25, rand=1.0, fast=True):
+    def __frame(self, *, frame=0, threshold=0.5, indent=0.25, stripes=1.0,
+                fast=True):
         """
-        Find borders:
-            - fast or precise: fast is only one iteration of possibly iterable
-              full scan
-            - use rand to use only random <rand> percent of columns to scan
+        Find borders for frame
         """
-        arr = np.array(self.__converted)
+        arr = np.array(self.__converted[frame])
         borders = []
-        rand = int(1.0 / rand) if 0.0 < rand < 1.0 else None
+        stripes = int(1.0 / stripes) if 0.0 < stripes < 1.0 else None
 
         # For every side of an image
         for side in range(4):
@@ -52,10 +90,14 @@ class ENIMDA:
             h, w = rot.shape
 
             # Skip some columns
-            if rand is not None:
+            if stripes is not None:
                 arrs = []
-                for i in range(0, w - rand, rand + 1):
-                    r = randint(i, i + rand)
+                if w > stripes:
+                    for i in range(0, w - stripes, stripes + 1):
+                        r = randint(i, i + stripes)
+                        arrs.append(rot[0: h, r: r + 1])
+                else:
+                    r = randint(0, w - 1)
                     arrs.append(rot[0: h, r: r + 1])
                 rot = np.hstack(arrs)
                 h, w = rot.shape
@@ -94,9 +136,29 @@ class ENIMDA:
 
             borders.append(border)
 
-        self.__borders = tuple(borders)
+        return tuple(borders)
 
-        return None
+    def scan(self, *, frames=1.0, threshold=0.5, indent=0.25, stripes=1.0,
+             fast=True):
+        """
+        Find borders for all frames:
+            - fast or precise: fast is only one iteration of possibly iterable
+              full scan
+            - use stripes to use only random <stripes> percent of columns to
+              scan
+        """
+        borders = []
+        frames = int(1.0 / frames) if 0.0 < frames < 1.0 else None
+
+        # Skip some frames
+        if frames is not None:
+            arrs = []
+            if self.__frames > frames:
+                for i in range(0, self.__frames - frames, frames + 1):
+                    r = randint(i, i + frames)
+            else:
+                r = randint(0, self.__frames - 1)
+            rot = np.hstack(arrs)
 
     def outline(self):
         """
