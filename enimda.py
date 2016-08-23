@@ -8,7 +8,7 @@ import numpy as np
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 
 def _entropy(*, signal):
@@ -48,6 +48,7 @@ class ENIMDA:
     __multiplier = 1.0
     __converted = None
     __borders = None
+    __processed = None
 
     @property
     def animated(self):
@@ -87,11 +88,11 @@ class ENIMDA:
         """
         return any(self.borders)
 
-    def __init__(self, *, path=None, minimize=None):
+    def __init__(self, *, file_=None, minimize=None):
         """
         Load image
         """
-        image = Image.open(path)
+        image = Image.open(file_)
         self.__animated = 'loop' in image.info
 
         # Initial frames
@@ -234,35 +235,39 @@ class ENIMDA:
         """
         Outline image borders with dotted lines
         """
-        if self.__initial.mode in ('1', 'L', 'I', 'F'):
+        self.__processed = deepcopy(self.__initial)
+
+        if self.__processed[0].mode in ('1', 'L', 'I', 'F'):
             black = 0
             white = 255
         else:
             black = (0, 0, 0)
             white = (255, 255, 255)
 
-        w, h = self.__initial.size
-        draw = ImageDraw.Draw(self.__initial)
+        w, h = self.__processed[0].size
 
-        if self.__borders[0] > 0:
-            for i in range(0, w):
-                fill = white if i % 2 == 0 else black
-                draw.point((i, self.__borders[0]), fill=fill)
+        for frame in self.__processed:
+            draw = ImageDraw.Draw(frame)
 
-        if self.__borders[1] > 0:
-            for i in range(0, h):
-                fill = white if i % 2 == 0 else black
-                draw.point((w - 1 - self.__borders[1], i), fill=fill)
+            if self.borders[0] > 0:
+                for i in range(0, w):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((i, self.borders[0]), fill=fill)
 
-        if self.__borders[2] > 0:
-            for i in range(0, w):
-                fill = white if i % 2 == 0 else black
-                draw.point((i, h - 1 - self.__borders[2]), fill=fill)
+            if self.borders[1] > 0:
+                for i in range(0, h):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((w - 1 - self.borders[1], i), fill=fill)
 
-        if self.__borders[3] > 0:
-            for i in range(0, h):
-                fill = white if i % 2 == 0 else black
-                draw.point((self.__borders[3], i), fill=fill)
+            if self.borders[2] > 0:
+                for i in range(0, w):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((i, h - 1 - self.borders[2]), fill=fill)
+
+            if self.borders[3] > 0:
+                for i in range(0, h):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((self.borders[3], i), fill=fill)
 
         return None
 
@@ -270,11 +275,26 @@ class ENIMDA:
         """
         Crop an image - cut all borders/whitespace
         """
-        w, h = self.__initial.size
-        left = self.__borders[3]
-        upper = self.__borders[0]
-        right = w - self.__borders[1]
-        lower = h - self.__borders[2]
-        self.__initial = self.__initial.crop((left, upper, right, lower))
+        self.__processed = deepcopy(self.__initial)
+
+        w, h = self.__processed[0].size
+        left = self.borders[3]
+        upper = self.borders[0]
+        right = w - self.borders[1]
+        lower = h - self.borders[2]
+
+        for index, frame in enumerate(self.__processed):
+            self.__processed[index] = frame.crop((left, upper, right, lower))
+
+        return None
+
+    def save(self, *, file_):
+        """
+        Save an image
+        """
+        if self.animated:
+            pass
+        else:
+            self.__processed[0].save(file_)
 
         return None

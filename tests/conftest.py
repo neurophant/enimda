@@ -10,7 +10,7 @@ from enimda import ENIMDA
 def fixed_bordered():
     def func(*, minimize=None):
         path = os.path.join(os.path.dirname(__file__), 'fixed/bordered.jpg')
-        em = ENIMDA(path=path, minimize=minimize)
+        em = ENIMDA(file_=path, minimize=minimize)
         return em
     return func
 
@@ -19,7 +19,7 @@ def fixed_bordered():
 def fixed_clear():
     def func(*, minimize=None):
         path = os.path.join(os.path.dirname(__file__), 'fixed/clear.jpg')
-        em = ENIMDA(path=path, minimize=minimize)
+        em = ENIMDA(file_=path, minimize=minimize)
         return em
     return func
 
@@ -28,7 +28,7 @@ def fixed_clear():
 def anima_bordered():
     def func(*, minimize=None):
         path = os.path.join(os.path.dirname(__file__), 'anima/bordered.gif')
-        em = ENIMDA(path=path, minimize=minimize)
+        em = ENIMDA(file_=path, minimize=minimize)
         return em
     return func
 
@@ -37,6 +37,6 @@ def anima_bordered():
 def anima_clear():
     def func(*, minimize=None):
         path = os.path.join(os.path.dirname(__file__), 'anima/clear.gif')
-        em = ENIMDA(path=path, minimize=minimize)
+        em = ENIMDA(file_=path, minimize=minimize)
         return em
     return func

@@ -42,15 +42,14 @@ Find if image has any borders:
 
 
     # Load target image
-    im = Image.open('test.jpg')
-    em = ENIMDA(image=im)
+    em = ENIMDA(file_='test.jpg')
 
     # Scan for borders with high precision
     em.scan(fast=False)
 
     # Save image with outlined borders for demonstration
     em.outline()
-    em.image.save('outlined.jpg')
+    em.save(file_='outlined.jpg')
 
     # Print found image borders (tuple)
     print(em.borders)
