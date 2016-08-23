@@ -25,5 +25,5 @@ setup(
     ],
     keywords='image border detection',
     py_modules=['enimda'],
-    install_requires=['numpy>=1.11.0', 'Pillow>=3.2.0'],
+    install_requires=['numpy>=1.11.0', 'Pillow>=3.2.0', 'Wand>=0.4.3'],
 )
