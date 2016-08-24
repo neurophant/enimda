@@ -16,6 +16,9 @@ __version__ = '1.1.1'
 def _entropy(*, signal):
     """
     Calculate entropy for 1D numpy array
+
+    Keyword arguments:
+    signal -- 1D numpy array
     """
     propab = [np.size(signal[signal == i]) / (1.0 * signal.size)
               for i in list(set(signal))]
@@ -26,6 +29,11 @@ def _entropy(*, signal):
 def _ranges(*, count, paginate, limit=None):
     """
     Get page-like ranges for random generation
+
+    Keyword arguments:
+    count -- items count
+    paginate -- items per page
+    limit -- limits page count if exceeds this (default None)
     """
     if limit is not None:
         total = count // paginate + int(bool(count % paginate))
@@ -44,10 +52,10 @@ def _ranges(*, count, paginate, limit=None):
 
 
 def _wand_path(*, file_):
-    if isinstance(file_, str):
-        return {'filename': file_}
-    else:
-        return {'file': file_}
+    """
+    Returns kwargs for Wand depending on file variable type
+    """
+    return {'filename': file_} if isinstance(file_, str) else {'file': file_}
 
 
 class ENIMDA:
@@ -62,20 +70,6 @@ class ENIMDA:
     __converted = None
     __borders = None
     __processed = None
-
-    @property
-    def animated(self):
-        """
-        Animated flag
-        """
-        return self.__animated
-
-    @property
-    def frames(self):
-        """
-        Frame count
-        """
-        return self.__frames
 
     @property
     def borders(self):
@@ -94,17 +88,26 @@ class ENIMDA:
         """
         return any(self.borders)
 
-    def __init__(self, *, file_=None, minimize=None, frames=1.0,
+    def __init__(self, *,
+                 file_,
+                 minimize=None,
+                 frames=1.0,
                  max_frames=None):
         """
         Load image
+
+        Keyword arguments:
+        file_ -- path to file or StringIO/BytesIO
+        minimize -- image will be resized to this size (default None)
+        frames -- random frames usage percentage (GIFs) (default 1.0)
+        max_frames -- max frames for processing (default None)
         """
         self.__file = file_
 
         # Animation flag and frame count
         with Image.open(file_) as image:
             self.__animated = 'loop' in image.info
-            if self.animated:
+            if self.__animated:
                 self.__frames = 0
                 try:
                     while True:
@@ -115,33 +118,26 @@ class ENIMDA:
 
         # Initial frames
         with Image.open(file_) as image:
-            if self.animated:
-                frames = round(1.0 / frames) if 0.0 < frames < 1.0 else None
+            if self.__animated:
+                paginate = round(1.0 / frames) if 0.0 < frames < 1.0 else 1
                 self.__initial = []
 
-                if frames is not None:
-                    # Limited frame count
-                    ranges = tuple(
-                        randint(*r)
-                        for r in ranges_(count=self.frames, paginate=frames,
-                                         limit=max_frames))
-                    frame = 0
-                    try:
-                        while True:
-                            if frame in ranges:
-                                self.__initial.append(image.copy())
-                            image.seek(image.tell() + 1)
-                            frame += 1
-                    except EOFError:
-                        pass
-                else:
-                    # All frames
-                    try:
-                        while True:
+                # Limited frame count
+                ranges = tuple(
+                    randint(*r)
+                    for r in _ranges(
+                        count=self.__frames,
+                        paginate=paginate,
+                        limit=max_frames))
+                frame = 0
+                try:
+                    while True:
+                        if frame in ranges:
                             self.__initial.append(image.copy())
-                            image.seek(image.tell() + 1)
-                    except EOFError:
-                        pass
+                        image.seek(image.tell() + 1)
+                        frame += 1
+                except EOFError:
+                    pass
             else:
                 self.__initial = [image.copy()]
 
@@ -174,14 +170,27 @@ class ENIMDA:
 
         return None
 
-    def __scan_frame(self, *, frame=0, threshold=0.5, indent=0.25, stripes=1.0,
+    def __scan_frame(self, *,
+                     frame=0,
+                     threshold=0.5,
+                     indent=0.25,
+                     stripes=1.0,
+                     max_stripes=None,
                      fast=True):
         """
         Find borders for frame
+
+        Keyword arguments:
+        frame -- frame index (default 0)
+        threshold -- algorithm agressiveness (default 0.5)
+        indent -- starting point in percent of width/height (default 0.25)
+        stripes -- random stripes usage coefficient (default 1.0)
+        max_stripes -- max stripes for processing (default None)
+        fast -- True - only one iteration will be used (default True)
         """
         arr = np.array(self.__converted[frame])
         borders = []
-        stripes = round(1.0 / stripes) if 0.0 < stripes < 1.0 else None
+        paginate = round(1.0 / stripes) if 0.0 < stripes < 1.0 else 1
 
         # For every side of an image
         for side in range(4):
@@ -190,13 +199,15 @@ class ENIMDA:
             h, w = rot.shape
 
             # Skip some columns
-            if stripes is not None:
-                arrs = []
-                for i in _ranges(count=w, paginate=stripes):
-                    r = randint(*i)
-                    arrs.append(rot[0: h, r: r + 1])
-                rot = np.hstack(arrs)
-                h, w = rot.shape
+            arrs = []
+            for i in _ranges(
+                    count=w,
+                    paginate=paginate,
+                    limit=max_stripes):
+                r = randint(*i)
+                arrs.append(rot[0: h, r: r + 1])
+            rot = np.hstack(arrs)
+            h, w = rot.shape
 
             # Iterative detection
             border = 0
@@ -234,22 +245,32 @@ class ENIMDA:
 
         return tuple(borders)
 
-    def scan(self, *, threshold=0.5, indent=0.25, stripes=1.0, fast=True):
+    def scan(self, *,
+             threshold=0.5,
+             indent=0.25,
+             stripes=1.0,
+             max_stripes=None,
+             fast=True):
         """
-        Find borders for all frames:
-            - frames is used for animated images - logics is the same as
-              stripes
-            - fast or precise: fast is only one iteration of possibly iterable
-              full scan
-            - use stripes to use only random <stripes> percent of columns to
-              scan
+        Find borders for all frames
+
+        Keyword arguments:
+        threshold -- algorithm agressiveness (default 0.5)
+        indent -- starting point in percent of width/height (default 0.25)
+        stripes -- random stripes usage coefficient (default 1.0)
+        max_stripes -- max stripes for processing (default None)
+        fast -- True - only one iteration will be used (default True)
         """
         borders = []
 
         for f in range(len(self.__converted)):
             borders.append(self.__scan_frame(
-                frame=f, threshold=threshold, indent=indent,
-                stripes=stripes, fast=fast))
+                frame=f,
+                threshold=threshold,
+                indent=indent,
+                stripes=stripes,
+                max_stripes=max_stripes,
+                fast=fast))
 
         self.__borders = tuple(borders)
 
@@ -313,6 +334,9 @@ class ENIMDA:
     def save(self, *, file_):
         """
         Save an image
+
+        Keyword arguments:
+        file_ -- path to file ot StringIO/BytesIO
         """
         if isinstance(self.__processed, Image.Image):
             self.__processed.save(file_)

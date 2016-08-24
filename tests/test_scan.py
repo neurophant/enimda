@@ -43,6 +43,14 @@ def test_anima_bordered_frames_partial(anima_bordered, fast, minimize):
     assert em.has_borders == True
 
 
+@pytest.mark.parametrize('fast', (True, False))
+@pytest.mark.parametrize('minimize', (None, 200))
+def test_anima_bordered_frames_partial_max(anima_bordered, fast, minimize):
+    em = anima_bordered(minimize=minimize, frames=0.1, max_frames=10)
+    em.scan(stripes=0.1, max_stripes=10, fast=fast)
+    assert em.has_borders == True
+
+
 @pytest.mark.parametrize('params', (
     {'fast': True, 'minimize': None, 'borders': (12, 72, 9, 80)},
     {'fast': False, 'minimize': None, 'borders': (22, 85, 16, 85)},
