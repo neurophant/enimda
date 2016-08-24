@@ -23,10 +23,14 @@ def _entropy(*, signal):
     return np.sum([p * np.log2(1.0 / p) for p in propab])
 
 
-def _ranges(*, count, paginate):
+def _ranges(*, count, paginate, limit=None):
     """
     Get page-like ranges for random generation
     """
+    if limit is not None:
+        total = count // paginate + int(bool(count % paginate))
+        if total > limit:
+            paginate = round(count / limit)
     ranges_ = []
     pages = count // paginate
     remainder = count % paginate
@@ -90,27 +94,56 @@ class ENIMDA:
         """
         return any(self.borders)
 
-    def __init__(self, *, file_=None, minimize=None, convert=True):
+    def __init__(self, *, file_=None, minimize=None, frames=1.0,
+                 max_frames=None):
         """
         Load image
         """
         self.__file = file_
-        image = Image.open(file_)
-        self.__animated = 'loop' in image.info
+
+        # Animation flag and frame count
+        with Image.open(file_) as image:
+            self.__animated = 'loop' in image.info
+            if self.animated:
+                self.__frames = 0
+                try:
+                    while True:
+                        self.__frames += 1
+                        image.seek(image.tell() + 1)
+                except EOFError:
+                    pass
 
         # Initial frames
-        if self.animated:
-            self.__frames = 0
-            self.__initial = []
-            try:
-                while True:
-                    self.__frames += 1
-                    self.__initial.append(image.copy())
-                    image.seek(image.tell() + 1)
-            except EOFError:
-                pass
-        else:
-            self.__initial = [image.copy()]
+        with Image.open(file_) as image:
+            if self.animated:
+                frames = round(1.0 / frames) if 0.0 < frames < 1.0 else None
+                self.__initial = []
+
+                if frames is not None:
+                    # Limited frame count
+                    ranges = tuple(
+                        randint(*r)
+                        for r in ranges_(count=self.frames, paginate=frames,
+                                         limit=max_frames))
+                    frame = 0
+                    try:
+                        while True:
+                            if frame in ranges:
+                                self.__initial.append(image.copy())
+                            image.seek(image.tell() + 1)
+                            frame += 1
+                    except EOFError:
+                        pass
+                else:
+                    # All frames
+                    try:
+                        while True:
+                            self.__initial.append(image.copy())
+                            image.seek(image.tell() + 1)
+                    except EOFError:
+                        pass
+            else:
+                self.__initial = [image.copy()]
 
         # If minimization required - recalculate multiplier and new size
         if minimize is not None:
@@ -201,8 +234,7 @@ class ENIMDA:
 
         return tuple(borders)
 
-    def scan(self, *, frames=1.0, threshold=0.5, indent=0.25, stripes=1.0,
-             fast=True):
+    def scan(self, *, threshold=0.5, indent=0.25, stripes=1.0, fast=True):
         """
         Find borders for all frames:
             - frames is used for animated images - logics is the same as
@@ -213,24 +245,11 @@ class ENIMDA:
               scan
         """
         borders = []
-        frames = round(1.0 / frames) if 0.0 < frames < 1.0 else None
 
-        if self.animated:
-            if frames is not None:
-                for i in _ranges(count=self.frames, paginate=frames):
-                    r = randint(*i)
-                    borders.append(self.__scan_frame(
-                        frame=r, threshold=threshold, indent=indent,
-                        stripes=stripes, fast=fast))
-            else:
-                for r in range(self.frames):
-                    borders.append(self.__scan_frame(
-                        frame=r, threshold=threshold, indent=indent,
-                        stripes=stripes, fast=fast))
-        else:
+        for f in range(len(self.__converted)):
             borders.append(self.__scan_frame(
-                threshold=threshold, indent=indent, stripes=stripes,
-                fast=fast))
+                frame=f, threshold=threshold, indent=indent,
+                stripes=stripes, fast=fast))
 
         self.__borders = tuple(borders)
 

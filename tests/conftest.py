@@ -26,7 +26,7 @@ def fixed_clear():
 
 @pytest.fixture
 def anima_bordered():
-    def func(*, minimize=None):
+    def func(*, minimize=None, frames=1.0):
         path = os.path.join(os.path.dirname(__file__), 'anima/bordered.gif')
         em = ENIMDA(file_=path, minimize=minimize)
         return em
@@ -35,7 +35,7 @@ def anima_bordered():
 
 @pytest.fixture
 def anima_clear():
-    def func(*, minimize=None):
+    def func(*, minimize=None, frames=1.0):
         path = os.path.join(os.path.dirname(__file__), 'anima/clear.gif')
         em = ENIMDA(file_=path, minimize=minimize)
         return em
