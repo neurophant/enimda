@@ -10,7 +10,7 @@ from images2gif import writeGif
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 
 def _entropy(*, signal):
@@ -26,9 +26,9 @@ def _entropy(*, signal):
     return np.sum([p * np.log2(1.0 / p) for p in propab])
 
 
-def _ranges(*, count, paginate, limit=None):
+def _randoms(*, count, paginate, limit=None):
     """
-    Get page-like ranges for random generation
+    Get paginated random indexes
 
     Keyword arguments:
     count -- items count
@@ -39,16 +39,16 @@ def _ranges(*, count, paginate, limit=None):
         total = count // paginate + int(bool(count % paginate))
         if total > limit:
             paginate = round(count / limit)
-    ranges_ = []
+    randoms_ = []
     pages = count // paginate
     remainder = count % paginate
     for page in range(pages):
-        ranges_.append((page * paginate, (page + 1) * paginate - 1))
+        randoms_.append(randint(page * paginate, (page + 1) * paginate - 1))
     if remainder:
-        ranges_.append((pages * paginate,
-                        pages * paginate + remainder - 1))
+        randoms_.append(randint(pages * paginate,
+                                pages * paginate + remainder - 1))
 
-    return tuple(ranges_)
+    return tuple(randoms_)
 
 
 class ENIMDA:
@@ -92,56 +92,71 @@ class ENIMDA:
         file_ -- path to file or StringIO/BytesIO
         minimize -- image will be resized to this size (default None)
         frames -- random frames usage percentage (GIFs) (default 1.0)
-        max_frames -- max frames for processing (default None)
+        max_frames -- max frames for GIFs (default None)
         """
 
-        # Animation properties and initial frames
+        # Animation properties
         with Image.open(file_) as image:
-            self.__duration = image.info.get('duration', 100) / 1000
-            self.__loop = image.info.get('loop', 0)
-            self.__initial = []
+            total = 0
             if 'loop' in image.info:
+                self.__duration = image.info.get('duration', 100) / 1000
+                self.__loop = image.info.get('loop', 0)
                 try:
                     while True:
-                        self.__initial.append(image.copy())
+                        total += 1
                         image.seek(image.tell() + 1)
                 except EOFError:
                     pass
             else:
-                self.__initial.append(image.copy())
+                total += 1
 
-        # If minimization required - recalculate multiplier and new size
-        if minimize is not None:
-            image = self.__initial[0]
-            if image.width > minimize or image.height > minimize:
-                if image.width > image.height:
-                    width = minimize
-                    height = round(minimize * image.height / image.width)
-                    self.__multiplier = image.width / width
-                elif image.width < image.height:
-                    width = round(minimize * image.width / image.height)
-                    height = minimize
-                    self.__multiplier = image.height / height
-                else:
-                    width = height = minimize
-                    self.__multiplier = image.width / width
-            else:
-                width, height = image.width, image.height
-
-        # Converted frames
-        self.__converted = []
+        # Frame limitations for initial and converted
+        ri = _randoms(count=total, paginate=1, limit=max_frames)
         paginate = round(1.0 / frames) if 0.0 < frames < 1.0 else 1
-        ranges = tuple(
-            randint(*r)
-            for r in _ranges(count=len(self.__initial), paginate=paginate,
-                             limit=max_frames))
-        for index, frame in enumerate(self.__initial):
-            if index in ranges:
-                if minimize is not None:
-                    self.__converted.append(
-                        frame.copy().resize((width, height)).convert('L'))
+        rc = _randoms(count=total, paginate=paginate, limit=max_frames)
+
+        with Image.open(file_) as image:
+            # Calculate minified size and multiplier
+            if minimize is not None:
+                if image.width > minimize or image.height > minimize:
+                    if image.width > image.height:
+                        width = minimize
+                        height = round(minimize * image.height / image.width)
+                        self.__multiplier = image.width / width
+                    elif image.width < image.height:
+                        width = round(minimize * image.width / image.height)
+                        height = minimize
+                        self.__multiplier = image.height / height
+                    else:
+                        width = height = minimize
+                        self.__multiplier = image.width / width
                 else:
-                    self.__converted.append(frame.copy().convert('L'))
+                    minimize = None
+
+            # Initial and converted frames
+            self.__initial = []
+            self.__converted = []
+            try:
+                current = 0
+                while True:
+                    if current in ri:
+                        self.__initial.append(image.copy())
+                    if current in rc:
+                        if minimize is not None:
+                            self.__converted.append(
+                                image
+                                .copy()
+                                .resize((width, height))
+                                .convert('L'))
+                        else:
+                            self.__converted.append(
+                                image
+                                .copy()
+                                .convert('L'))
+                    image.seek(image.tell() + 1)
+                    current += 1
+            except EOFError:
+                pass
 
         return None
 
@@ -175,11 +190,10 @@ class ENIMDA:
 
             # Skip some columns
             arrs = []
-            for i in _ranges(
+            for r in _randoms(
                     count=w,
                     paginate=paginate,
                     limit=max_stripes):
-                r = randint(*i)
                 arrs.append(rot[0: h, r: r + 1])
             rot = np.hstack(arrs)
             h, w = rot.shape
@@ -304,7 +318,9 @@ class ENIMDA:
         self.__processed = []
         for frame in self.__initial:
             self.__processed.append(
-                frame.copy().crop((left, upper, right, lower)))
+                frame
+                .copy()
+                .crop((left, upper, right, lower)))
 
         return None
 

@@ -30,7 +30,7 @@ Setup
 .. code-block:: bash
     
     pip install https://github.com/embali/images2gif/tarball/master#egg=images2gif-1.0.0
-    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.2
+    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.3
 
 Usage
 -----
