@@ -1,4 +1,4 @@
-from random import randint
+from random import randint, shuffle
 from math import ceil
 
 from PIL import Image, ImageDraw
@@ -34,18 +34,18 @@ def _randoms(*, count, paginate, limit=None):
     paginate -- items per page
     limit -- limits page count if exceeds this (default None)
     """
-    if limit is not None:
-        total = count // paginate + int(bool(count % paginate))
-        if total > limit:
-            paginate = ceil(count / limit)
     randoms_ = []
     pages = count // paginate
     remainder = count % paginate
+    _ololo = []
     for page in range(pages):
         randoms_.append(randint(page * paginate, (page + 1) * paginate - 1))
     if remainder:
         randoms_.append(randint(pages * paginate,
                                 pages * paginate + remainder - 1))
+    if limit is not None:
+        shuffle(randoms_)
+        randoms_ = randoms_[:limit]
 
     return tuple(randoms_)
 
