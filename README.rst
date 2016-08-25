@@ -29,7 +29,8 @@ Setup
 
 .. code-block:: bash
     
-    pip install enimda
+    pip install https://github.com/embali/images2gif/tarball/master#egg=images2gif-1.0.0
+    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.2
 
 Usage
 -----
@@ -37,8 +38,6 @@ Usage
 Find if image has any borders:
 
 .. code-block:: python
-
-    from PIL import Image
 
     from enimda import ENIMDA
 
