@@ -26,5 +26,5 @@ setup(
     keywords='image border detection',
     py_modules=['enimda'],
     install_requires=['numpy>=1.11.1', 'Pillow>=3.3.1'],
-    dependency_links = ['git://github.com/embali/images2gif.git@611ac5ba3da0de4f8c89bc0db5da0a15cc516177#egg=images2gif'],
+    dependency_links=['https://github.com/embali/images2gif/tarball/master#egg=images2gif-1.0.0'],
 )
