@@ -3,14 +3,14 @@ from random import randint
 from io import BytesIO
 
 from PIL import Image, ImageDraw
-from wand.image import Image as WandImage
 import numpy as np
+from images2gif import writeGif
 
 
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 
 def _entropy(*, signal):
@@ -51,20 +51,12 @@ def _ranges(*, count, paginate, limit=None):
     return tuple(ranges_)
 
 
-def _wand_path(*, file_):
-    """
-    Returns kwargs for Wand depending on file variable type
-    """
-    return {'filename': file_} if isinstance(file_, str) else {'file': file_}
-
-
 class ENIMDA:
     """
     ENIMDA class
     """
-    __file = None
-    __animated = False
-    __frames = None
+    __duration = None
+    __loop = None
     __initial = None
     __multiplier = 1.0
     __converted = None
@@ -102,44 +94,21 @@ class ENIMDA:
         frames -- random frames usage percentage (GIFs) (default 1.0)
         max_frames -- max frames for processing (default None)
         """
-        self.__file = file_
 
-        # Animation flag and frame count
+        # Animation properties and initial frames
         with Image.open(file_) as image:
-            self.__animated = 'loop' in image.info
-            if self.__animated:
-                self.__frames = 0
+            self.__duration = image.info.get('duration', 100) / 1000
+            self.__loop = image.info.get('loop', 0)
+            self.__initial = []
+            if 'loop' in image.info:
                 try:
                     while True:
-                        self.__frames += 1
+                        self.__initial.append(image.copy())
                         image.seek(image.tell() + 1)
-                except EOFError:
-                    pass
-
-        # Initial frames
-        with Image.open(file_) as image:
-            if self.__animated:
-                paginate = round(1.0 / frames) if 0.0 < frames < 1.0 else 1
-                self.__initial = []
-
-                # Limited frame count
-                ranges = tuple(
-                    randint(*r)
-                    for r in _ranges(
-                        count=self.__frames,
-                        paginate=paginate,
-                        limit=max_frames))
-                frame = 0
-                try:
-                    while True:
-                        if frame in ranges:
-                            self.__initial.append(image.copy())
-                        image.seek(image.tell() + 1)
-                        frame += 1
                 except EOFError:
                     pass
             else:
-                self.__initial = [image.copy()]
+                self.__initial.append(image.copy())
 
         # If minimization required - recalculate multiplier and new size
         if minimize is not None:
@@ -161,12 +130,18 @@ class ENIMDA:
 
         # Converted frames
         self.__converted = []
-        for frame in self.__initial:
-            if minimize is not None:
-                self.__converted.append(
-                    frame.copy().resize((width, height)).convert('L'))
-            else:
-                self.__converted.append(frame.copy().convert('L'))
+        paginate = round(1.0 / frames) if 0.0 < frames < 1.0 else 1
+        ranges = tuple(
+            randint(*r)
+            for r in _ranges(count=len(self.__initial), paginate=paginate,
+                             limit=max_frames))
+        for index, frame in enumerate(self.__initial):
+            if index in ranges:
+                if minimize is not None:
+                    self.__converted.append(
+                        frame.copy().resize((width, height)).convert('L'))
+                else:
+                    self.__converted.append(frame.copy().convert('L'))
 
         return None
 
@@ -287,28 +262,32 @@ class ENIMDA:
 
         w, h = self.__initial[0].size
 
-        self.__processed = self.__initial[0].copy()
-        draw = ImageDraw.Draw(self.__processed)
+        self.__processed = []
+        for frame in self.__initial:
+            processed = frame.copy()
+            draw = ImageDraw.Draw(processed)
 
-        if self.borders[0] > 0:
-            for i in range(0, w):
-                fill = white if i % 2 == 0 else black
-                draw.point((i, self.borders[0]), fill=fill)
+            if self.borders[0] > 0:
+                for i in range(0, w):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((i, self.borders[0]), fill=fill)
 
-        if self.borders[1] > 0:
-            for i in range(0, h):
-                fill = white if i % 2 == 0 else black
-                draw.point((w - 1 - self.borders[1], i), fill=fill)
+            if self.borders[1] > 0:
+                for i in range(0, h):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((w - 1 - self.borders[1], i), fill=fill)
 
-        if self.borders[2] > 0:
-            for i in range(0, w):
-                fill = white if i % 2 == 0 else black
-                draw.point((i, h - 1 - self.borders[2]), fill=fill)
+            if self.borders[2] > 0:
+                for i in range(0, w):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((i, h - 1 - self.borders[2]), fill=fill)
 
-        if self.borders[3] > 0:
-            for i in range(0, h):
-                fill = white if i % 2 == 0 else black
-                draw.point((self.borders[3], i), fill=fill)
+            if self.borders[3] > 0:
+                for i in range(0, h):
+                    fill = white if i % 2 == 0 else black
+                    draw.point((self.borders[3], i), fill=fill)
+
+            self.__processed.append(processed)
 
         return None
 
@@ -322,12 +301,10 @@ class ENIMDA:
         right = w - self.borders[1]
         lower = h - self.borders[2]
 
-        if self.__animated:
-            self.__processed = WandImage(**_wand_path(file_=self.__file))
-            self.__processed.crop(left, upper, right, lower)
-        else:
-            self.__processed = self.__initial[0].copy()\
-                .crop((left, upper, right, lower))
+        self.__processed = []
+        for frame in self.__initial:
+            self.__processed.append(
+                frame.copy().crop((left, upper, right, lower)))
 
         return None
 
@@ -338,9 +315,10 @@ class ENIMDA:
         Keyword arguments:
         file_ -- path to file ot StringIO/BytesIO
         """
-        if isinstance(self.__processed, Image.Image):
-            self.__processed.save(file_)
-        elif isinstance(self.__processed, WandImage):
-            self.__processed.save(**_wand_path(file_=file_))
+        if len(self.__processed) == 1:
+            self.__processed[0].save(file_)
+        else:
+            writeGif(file_, self.__processed, duration=self.__duration,
+                     repeat=self.__loop)
 
         return None
