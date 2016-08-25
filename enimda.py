@@ -1,6 +1,5 @@
-from copy import deepcopy
 from random import randint
-from io import BytesIO
+from math import ceil
 
 from PIL import Image, ImageDraw
 import numpy as np
@@ -38,7 +37,7 @@ def _randoms(*, count, paginate, limit=None):
     if limit is not None:
         total = count // paginate + int(bool(count % paginate))
         if total > limit:
-            paginate = round(count / limit)
+            paginate = ceil(count / limit)
     randoms_ = []
     pages = count // paginate
     remainder = count % paginate
@@ -104,7 +103,7 @@ class ENIMDA:
                 try:
                     while True:
                         total += 1
-                        image.seek(image.tell() + 1)
+                        image.seek(total)
                 except EOFError:
                     pass
             else:
