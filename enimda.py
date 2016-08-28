@@ -74,7 +74,7 @@ class ENIMDA:
     def __init__(self, *, file_, minimize=None, frames=1.0, max_frames=None):
         """Load image
 
-        :param file_: path to file or StringIO/BytesIO
+        :param file_: path to file or file-like object
         :param minimize: image will be resized to this size (default None)
         :param frames: random frames usage percentage (GIFs) (default 1.0)
         :param max_frames: max frames for GIFs (default None)
@@ -291,7 +291,7 @@ class ENIMDA:
     def save(self, *, file_):
         """Save an image
 
-        :param file_: path to file to StringIO/BytesIO
+        :param file_: path to file or file-like object
         :returns: None
         """
         if len(self.__processed) == 1:
