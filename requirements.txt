@@ -4,4 +4,4 @@ Pillow==3.3.1
 py==1.4.31
 pytest==2.9.2
 pytest-cov==2.3.1
--e git://github.com/embali/images2gif.git#egg=images2gif-1.0.0
+-e git://github.com/embali/images2gif.git@1.0.0#egg=images2gif
