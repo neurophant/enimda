@@ -8,7 +8,7 @@ Supports GIF border detection and its cropping.
 Algorithm
 ---------
 
-For each side of the image starting from the top, clockwise:
+For each side of the image starting from top, rotating image counterclockwise:
 
 * Get upper block with 25% height (indent) of the dimension opposite to current side
 * Get lower block with the same height as the upper one (50% of image total)
@@ -18,6 +18,12 @@ For each side of the image starting from the top, clockwise:
 * Repeat from p.2 until we hit image edge
 * Get maximum (minimum) of the entropies difference
 * Here we have a border center if it lies closer to the edge rather than to the center of image and entropies difference is lower than pre-set threshold
+
+.. image:: https://raw.githubusercontent.com/embali/enimda/master/algorithm.gif
+    :alt: Sliding from center to edge - searching for maximum entropies difference
+    :width: 300
+    :height: 300
+    :align: center
 
 Requirements
 ------------

@@ -13,36 +13,35 @@ __version__ = '1.1.3'
 
 
 def _entropy(*, signal):
-    """
-    Calculate entropy for 1D numpy array
+    """Calculate entropy
 
-    Keyword arguments:
-    signal -- 1D numpy array
+    :param signal: 1D numpy array
+    :returns: entropy
     """
-    propab = [np.size(signal[signal == i]) / (1.0 * signal.size)
-              for i in list(set(signal))]
+    prob = (np.size(signal[signal == i]) / (1.0 * signal.size)
+            for i in set(signal))
 
-    return np.sum([p * np.log2(1.0 / p) for p in propab])
+    return np.sum(p * np.log2(1.0 / p) for p in prob)
 
 
 def _randoms(*, count, paginate, limit=None):
-    """
-    Get paginated random indexes
+    """Get paginated random indexes
 
-    Keyword arguments:
-    count -- items count
-    paginate -- items per page
-    limit -- limits page count if exceeds this (default None)
+    :param count: items count
+    :param paginate: items per page
+    :param limit: limits page count if exceeds this (default None)
+    :returns: tuple of indexes
     """
     randoms_ = []
+
     pages = count // paginate
-    remainder = count % paginate
-    _ololo = []
     for page in range(pages):
         randoms_.append(randint(page * paginate, (page + 1) * paginate - 1))
+    remainder = count % paginate
     if remainder:
         randoms_.append(randint(pages * paginate,
                                 pages * paginate + remainder - 1))
+
     if limit is not None:
         shuffle(randoms_)
         randoms_ = randoms_[:limit]
@@ -51,9 +50,7 @@ def _randoms(*, count, paginate, limit=None):
 
 
 class ENIMDA:
-    """
-    ENIMDA class
-    """
+    """ENIMDA class"""
     __duration = None
     __loop = None
     __initial = None
@@ -64,34 +61,24 @@ class ENIMDA:
 
     @property
     def borders(self):
-        """
-        Get borders (tuple)
-        """
+        """Borders"""
         return tuple(
-            round(self.__multiplier *
-                  min(border[i] for border in self.__borders))
+            round(self.__multiplier * min(b[i] for b in self.__borders))
             for i in range(4))
 
     @property
     def has_borders(self):
-        """
-        Flag is true if image has any borders on any frame
-        """
+        """Image has any borders on any frame"""
         return any(self.borders)
 
-    def __init__(self, *,
-                 file_,
-                 minimize=None,
-                 frames=1.0,
-                 max_frames=None):
-        """
-        Load image
+    def __init__(self, *, file_, minimize=None, frames=1.0, max_frames=None):
+        """Load image
 
-        Keyword arguments:
-        file_ -- path to file or StringIO/BytesIO
-        minimize -- image will be resized to this size (default None)
-        frames -- random frames usage percentage (GIFs) (default 1.0)
-        max_frames -- max frames for GIFs (default None)
+        :param file_: path to file or StringIO/BytesIO
+        :param minimize: image will be resized to this size (default None)
+        :param frames: random frames usage percentage (GIFs) (default 1.0)
+        :param max_frames: max frames for GIFs (default None)
+        :returns: None
         """
 
         # Animation properties
@@ -100,12 +87,12 @@ class ENIMDA:
             if 'loop' in image.info:
                 self.__duration = image.info.get('duration', 100) / 1000
                 self.__loop = image.info.get('loop', 0)
-                try:
-                    while True:
-                        total += 1
+                while True:
+                    total += 1
+                    try:
                         image.seek(total)
-                except EOFError:
-                    pass
+                    except EOFError:
+                        break
             else:
                 total += 1
 
@@ -135,47 +122,41 @@ class ENIMDA:
             # Initial and converted frames
             self.__initial = []
             self.__converted = []
-            try:
-                current = 0
-                while True:
-                    if current in ri:
-                        self.__initial.append(image.copy())
-                    if current in rc:
-                        if minimize is not None:
-                            self.__converted.append(
-                                image
-                                .copy()
-                                .resize((width, height))
-                                .convert('L'))
-                        else:
-                            self.__converted.append(
-                                image
-                                .copy()
-                                .convert('L'))
-                    image.seek(image.tell() + 1)
-                    current += 1
-            except EOFError:
-                pass
+            current = 0
+            while True:
+                if current in ri:
+                    self.__initial.append(image.copy())
+                if current in rc:
+                    if minimize is not None:
+                        self.__converted.append(
+                            image
+                            .copy()
+                            .resize((width, height))
+                            .convert('L'))
+                    else:
+                        self.__converted.append(
+                            image
+                            .copy()
+                            .convert('L'))
+                try:
+                    image.seek(current + 1)
+                except EOFError:
+                    break
+                current += 1
 
         return None
 
-    def __scan_frame(self, *,
-                     frame=0,
-                     threshold=0.5,
-                     indent=0.25,
-                     stripes=1.0,
-                     max_stripes=None,
-                     fast=True):
-        """
-        Find borders for frame
+    def __scan_frame(self, *, frame=0, threshold=0.5, indent=0.25, stripes=1.0,
+                     max_stripes=None, fast=True):
+        """Find borders for frame
 
-        Keyword arguments:
-        frame -- frame index (default 0)
-        threshold -- algorithm agressiveness (default 0.5)
-        indent -- starting point in percent of width/height (default 0.25)
-        stripes -- random stripes usage coefficient (default 1.0)
-        max_stripes -- max stripes for processing (default None)
-        fast -- True - only one iteration will be used (default True)
+        :param frame: frame index (default 0)
+        :param threshold: algorithm agressiveness (default 0.5)
+        :param indent: starting point in percent of width/height (default 0.25)
+        :param stripes: random stripes usage coefficient (default 1.0)
+        :param max_stripes: max stripes for processing (default None)
+        :param fast: only one iteration will be used (default True)
+        :returns: tuple of border offsets
         """
         arr = np.array(self.__converted[frame])
         borders = []
@@ -189,10 +170,7 @@ class ENIMDA:
 
             # Skip some columns
             arrs = []
-            for r in _randoms(
-                    count=w,
-                    paginate=paginate,
-                    limit=max_stripes):
+            for r in _randoms(count=w, paginate=paginate, limit=max_stripes):
                 arrs.append(rot[0: h, r: r + 1])
             rot = np.hstack(arrs)
             h, w = rot.shape
@@ -233,21 +211,16 @@ class ENIMDA:
 
         return tuple(borders)
 
-    def scan(self, *,
-             threshold=0.5,
-             indent=0.25,
-             stripes=1.0,
-             max_stripes=None,
-             fast=True):
-        """
-        Find borders for all frames
+    def scan(self, *, threshold=0.5, indent=0.25, stripes=1.0,
+             max_stripes=None, fast=True):
+        """Find borders for all frames
 
-        Keyword arguments:
-        threshold -- algorithm agressiveness (default 0.5)
-        indent -- starting point in percent of width/height (default 0.25)
-        stripes -- random stripes usage coefficient (default 1.0)
-        max_stripes -- max stripes for processing (default None)
-        fast -- True - only one iteration will be used (default True)
+        :param threshold: algorithm agressiveness (default 0.5)
+        :param indent: starting point in percent of width/height (default 0.25)
+        :param stripes: random stripes usage coefficient (default 1.0)
+        :param max_stripes: max stripes for processing (default None)
+        :param fast: only one iteration will be used (default True)
+        :returns: None
         """
         borders = []
 
@@ -262,10 +235,10 @@ class ENIMDA:
 
         self.__borders = tuple(borders)
 
+        return None
+
     def outline(self):
-        """
-        Outline image borders with dotted lines
-        """
+        """Outline image borders with dotted lines"""
         if self.__initial[0].mode in ('1', 'L', 'I', 'F', 'P'):
             black = 0
             white = 255
@@ -280,34 +253,26 @@ class ENIMDA:
             processed = frame.copy()
             draw = ImageDraw.Draw(processed)
 
-            if self.borders[0] > 0:
-                for i in range(0, w):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((i, self.borders[0]), fill=fill)
-
-            if self.borders[1] > 0:
-                for i in range(0, h):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((w - 1 - self.borders[1], i), fill=fill)
-
-            if self.borders[2] > 0:
-                for i in range(0, w):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((i, h - 1 - self.borders[2]), fill=fill)
-
-            if self.borders[3] > 0:
-                for i in range(0, h):
-                    fill = white if i % 2 == 0 else black
-                    draw.point((self.borders[3], i), fill=fill)
+            for side in range(4):
+                if self.borders[side] > 0:
+                    for i in range(0, h if side % 2 else w):
+                        fill = white if i % 2 == 0 else black
+                        if side == 0:
+                            coords = (i, self.borders[side])
+                        elif side == 1:
+                            coords = (w - 1 - self.borders[side], i)
+                        elif side == 2:
+                            coords = (i, h - 1 - self.borders[side])
+                        elif side == 3:
+                            coords = (self.borders[side], i)
+                        draw.point(coords, fill=fill)
 
             self.__processed.append(processed)
 
         return None
 
     def crop(self):
-        """
-        Crop an image - cut all borders/whitespace
-        """
+        """Crop an image - cut all borders/whitespace"""
         w, h = self.__initial[0].size
         left = self.borders[3]
         upper = self.borders[0]
@@ -324,11 +289,10 @@ class ENIMDA:
         return None
 
     def save(self, *, file_):
-        """
-        Save an image
+        """Save an image
 
-        Keyword arguments:
-        file_ -- path to file ot StringIO/BytesIO
+        :param file_: path to file to StringIO/BytesIO
+        :returns: None
         """
         if len(self.__processed) == 1:
             self.__processed[0].save(file_)
