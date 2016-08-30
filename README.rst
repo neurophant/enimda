@@ -35,7 +35,7 @@ Setup
 .. code-block:: bash
     
     pip install https://github.com/embali/images2gif/tarball/master#egg=images2gif-1.0.0
-    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.3
+    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.4
 
 Usage
 -----
@@ -48,14 +48,14 @@ Find if image has any borders:
 
 
     # Load target image
-    em = ENIMDA(file_='test.jpg')
+    em = ENIMDA(fp='test.jpg')
 
     # Scan for borders with high precision
     em.scan(fast=False)
 
     # Save image with outlined borders for demonstration
     em.outline()
-    em.save(file_='outlined.jpg')
+    em.save(fp='outlined.jpg')
 
     # Print found image borders (tuple)
     print(em.borders)

@@ -3,13 +3,13 @@ from math import ceil
 
 from PIL import Image, ImageDraw
 import numpy as np
-from images2gif import writeGif, writeGifToFile
+from images2gif import writeGif, GifWriter
 
 
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 
 def _entropy(*, signal):
@@ -50,6 +50,7 @@ def _randoms(*, count, paginate, limit=None):
 
 class ENIMDA:
     """ENIMDA class"""
+    __format = None
     __duration = None
     __loop = None
     __initial = None
@@ -80,8 +81,9 @@ class ENIMDA:
         :returns: None
         """
 
-        # Animation properties
+        # Common properties
         with Image.open(fp) as image:
+            self.__format = image.format
             total = 0
             if 'loop' in image.info:
                 self.__duration = image.info.get('duration', 100) / 1000
@@ -274,7 +276,7 @@ class ENIMDA:
         return None
 
     def crop(self):
-        """Crop an image - cut all borders/whitespace"""
+        """Crop an image - cut borders/whitespace"""
         w, h = self.__initial[0].size
         left = self.borders[3]
         upper = self.borders[0]
@@ -297,13 +299,20 @@ class ENIMDA:
         :returns: None
         """
         if len(self.__processed) == 1:
-            self.__processed[0].save(fp)
+            self.__processed[0].save(fp, format=self.__format)
         else:
-            if isinstance(fp, basestring):
+            if isinstance(fp, str):
                 writeGif(fp, self.__processed, duration=self.__duration,
                          repeat=self.__loop)
             else:
-                writeGifToFile(fp, self.__processed, duration=self.__duration,
-                               loop=self.__loop)
+                gifWriter = GifWriter()
+                gifWriter.transparency = False
+                gifWriter.writeGifToFile(
+                    fp,
+                    self.__processed,
+                    [self.__duration] * len(self.__processed),
+                    self.__loop,
+                    [(0, 0)] * len(self.__processed),
+                    [1] * len(self.__processed))
 
         return None
