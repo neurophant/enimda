@@ -54,8 +54,8 @@ def test_anima_bordered_frames_partial_max(anima_bordered, fast, minimize):
 @pytest.mark.parametrize('params', (
     {'fast': True, 'minimize': None, 'borders': (12, 72, 9, 80)},
     {'fast': False, 'minimize': None, 'borders': (22, 85, 16, 85)},
-    {'fast': True, 'minimize': 200, 'borders': (12, 72, 9, 80)},
-    {'fast': False, 'minimize': 200, 'borders': (22, 85, 16, 85)}))
+    {'fast': True, 'minimize': 200, 'borders': (17, 72, 10, 84)},
+    {'fast': False, 'minimize': 200, 'borders': (24, 84, 14, 86)}))
 def test_anima_bordered_full(anima_bordered, params):
     em = anima_bordered(minimize=params['minimize'])
     em.scan(fast=params['fast'])

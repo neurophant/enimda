@@ -29,19 +29,19 @@ def fixed_bordered(image):
 @pytest.fixture
 def fixed_clear(image):
     def func(**kwargs):
-        return image('fixed/clear.jpg')
+        return image('fixed/clear.jpg', **kwargs)
     return func
 
 
 @pytest.fixture
 def anima_bordered(image):
     def func(**kwargs):
-        return image('anima/bordered.gif')
+        return image('anima/bordered.gif', **kwargs)
     return func
 
 
 @pytest.fixture
 def anima_clear(image):
     def func(**kwargs):
-        return image('anima/clear.gif')
+        return image('anima/clear.gif', **kwargs)
     return func
