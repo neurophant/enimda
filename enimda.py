@@ -3,7 +3,7 @@ from math import ceil
 
 from PIL import Image, ImageDraw
 import numpy as np
-from images2gif import writeGif
+from images2gif import writeGif, writeGifToFile
 
 
 __author__ = 'Anton Smolin'
@@ -18,8 +18,7 @@ def _entropy(*, signal):
     :param signal: 1D numpy array
     :returns: entropy
     """
-    prob = (np.size(signal[signal == i]) / (1.0 * signal.size)
-            for i in set(signal))
+    prob = (np.size(signal[signal == i]) / signal.size for i in set(signal))
 
     return np.sum(p * np.log2(1.0 / p) for p in prob)
 
@@ -32,21 +31,21 @@ def _randoms(*, count, paginate, limit=None):
     :param limit: limits page count if exceeds this (default None)
     :returns: tuple of indexes
     """
-    randoms_ = []
+    randoms = []
 
     pages = count // paginate
     for page in range(pages):
-        randoms_.append(randint(page * paginate, (page + 1) * paginate - 1))
+        randoms.append(randint(page * paginate, (page + 1) * paginate - 1))
     remainder = count % paginate
     if remainder:
-        randoms_.append(randint(pages * paginate,
-                                pages * paginate + remainder - 1))
+        randoms.append(randint(pages * paginate,
+                               pages * paginate + remainder - 1))
 
     if limit is not None:
-        shuffle(randoms_)
-        randoms_ = randoms_[:limit]
+        shuffle(randoms)
+        randoms = randoms[:limit]
 
-    return tuple(randoms_)
+    return tuple(randoms)
 
 
 class ENIMDA:
@@ -71,10 +70,10 @@ class ENIMDA:
         """Image has any borders on any frame"""
         return any(self.borders)
 
-    def __init__(self, *, file_, minimize=None, frames=1.0, max_frames=None):
+    def __init__(self, *, fp, minimize=None, frames=1.0, max_frames=None):
         """Load image
 
-        :param file_: path to file or file-like object
+        :param fp: path to file or file object
         :param minimize: image will be resized to this size (default None)
         :param frames: random frames usage percentage (GIFs) (default 1.0)
         :param max_frames: max frames for GIFs (default None)
@@ -82,11 +81,14 @@ class ENIMDA:
         """
 
         # Animation properties
-        with Image.open(file_) as image:
+        with Image.open(fp) as image:
             total = 0
             if 'loop' in image.info:
                 self.__duration = image.info.get('duration', 100) / 1000
-                self.__loop = image.info.get('loop', 0)
+                try:
+                    self.__loop = int(image.info.get('loop', 0))
+                except TypeError:
+                    self.__loop = 0
                 while True:
                     total += 1
                     try:
@@ -101,7 +103,7 @@ class ENIMDA:
         paginate = round(1.0 / frames) if 0.0 < frames < 1.0 else 1
         rc = _randoms(count=total, paginate=paginate, limit=max_frames)
 
-        with Image.open(file_) as image:
+        with Image.open(fp) as image:
             # Calculate minified size and multiplier
             if minimize is not None:
                 if image.width > minimize or image.height > minimize:
@@ -288,16 +290,20 @@ class ENIMDA:
 
         return None
 
-    def save(self, *, file_):
+    def save(self, *, fp):
         """Save an image
 
-        :param file_: path to file or file-like object
+        :param fp: path to file or file object
         :returns: None
         """
         if len(self.__processed) == 1:
-            self.__processed[0].save(file_)
+            self.__processed[0].save(fp)
         else:
-            writeGif(file_, self.__processed, duration=self.__duration,
-                     repeat=self.__loop)
+            if isinstance(fp, basestring):
+                writeGif(fp, self.__processed, duration=self.__duration,
+                         repeat=self.__loop)
+            else:
+                writeGifToFile(fp, self.__processed, duration=self.__duration,
+                               loop=self.__loop)
 
         return None
