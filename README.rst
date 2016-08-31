@@ -11,16 +11,15 @@ Algorithm (simplified)
 For each side of the image starting from top, rotating image counterclockwise
 to keep side of interest on top:
 
-* Get upper block 25% height of image
+* Get upper block 25% of image height
 * Get lower block with the same height as the upper one
-* Calculate entropy for both blocks
-* Find their entropies difference
+* Calculate entropy for both blocks and their difference
 * Make upper block 1px less
 * Repeat from p.2 until we hit image edge
-* Get maximum (minimum) of the entropies difference - this is our border
+* Border is between blocks with entropy difference maximum
 
 .. image:: https://raw.githubusercontent.com/embali/enimda/master/algorithm.gif
-    :alt: Sliding from center to edge - searching for maximum entropies difference
+    :alt: Sliding from center to edge - searching for maximum entropy difference
     :width: 300
     :height: 300
 
