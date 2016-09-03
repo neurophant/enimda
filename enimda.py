@@ -84,21 +84,18 @@ class ENIMDA:
         # Common properties
         with Image.open(fp) as image:
             self.__format = image.format
+            self.__duration = image.info.get('duration', 100) / 1000
+            try:
+                self.__loop = int(image.info.get('loop', 0))
+            except TypeError:
+                self.__loop = 0
             total = 0
-            if 'loop' in image.info:
-                self.__duration = image.info.get('duration', 100) / 1000
-                try:
-                    self.__loop = int(image.info.get('loop', 0))
-                except TypeError:
-                    self.__loop = 0
-                while True:
-                    total += 1
-                    try:
-                        image.seek(total)
-                    except EOFError:
-                        break
-            else:
+            while True:
                 total += 1
+                try:
+                    image.seek(total)
+                except EOFError:
+                    break
 
         # Frame limitations for initial and converted
         ri = _randoms(count=total, paginate=1, limit=max_frames)
