@@ -34,7 +34,7 @@ Setup
 .. code-block:: bash
     
     pip install https://github.com/embali/images2gif/tarball/master#egg=images2gif-1.0.0
-    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.4
+    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.5
 
 Usage
 -----

@@ -3,13 +3,13 @@ from math import ceil
 
 from PIL import Image, ImageDraw
 import numpy as np
-from images2gif import writeGif, GifWriter
+from images2gif import GifWriter
 
 
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 
 def _entropy(*, signal):
@@ -301,18 +301,18 @@ class ENIMDA:
         if len(self.__processed) == 1:
             self.__processed[0].save(fp, format=self.__format)
         else:
+            gifWriter = GifWriter()
+            gifWriter.transparency = False
+            args = (
+                self.__processed,
+                [self.__duration] * len(self.__processed),
+                self.__loop,
+                [(0, 0)] * len(self.__processed),
+                [1] * len(self.__processed))
             if isinstance(fp, str):
-                writeGif(fp, self.__processed, duration=self.__duration,
-                         repeat=self.__loop)
+                with open(fp, 'wb') as fp:
+                    gifWriter.writeGifToFile(fp, *args)
             else:
-                gifWriter = GifWriter()
-                gifWriter.transparency = False
-                gifWriter.writeGifToFile(
-                    fp,
-                    self.__processed,
-                    [self.__duration] * len(self.__processed),
-                    self.__loop,
-                    [(0, 0)] * len(self.__processed),
-                    [1] * len(self.__processed))
+                gifWriter.writeGifToFile(fp, *args)
 
         return None
