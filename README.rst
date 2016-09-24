@@ -63,7 +63,7 @@ Demo
 
 For demo please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
 
-Also see live at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders' instrument
+Also it lives at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders' instrument
 
 Tests
 -----
