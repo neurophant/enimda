@@ -61,9 +61,9 @@ Find if image has any borders:
 Demo
 ----
 
-For demo images please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
+For demo please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
 
-Also see live demo at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders' instrument
+Also see live at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders' instrument
 
 Tests
 -----
