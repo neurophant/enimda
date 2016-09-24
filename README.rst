@@ -33,8 +33,7 @@ Setup
 
 .. code-block:: bash
     
-    pip install https://github.com/embali/images2gif/tarball/master#egg=images2gif-1.0.0
-    pip install https://github.com/embali/enimda/tarball/master#egg=enimda-1.1.5
+    pip install enimda
 
 Usage
 -----
@@ -62,7 +61,9 @@ Find if image has any borders:
 Demo
 ----
 
-For demonstration please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
+For demo images please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
+
+Also see live demo at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders' instrument
 
 Tests
 -----
