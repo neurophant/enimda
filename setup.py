@@ -10,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='enimda',
-    version='1.1.6',
+    version='1.1.7',
     description='Entropy-based image border detection algorithm',
     long_description=long_description,
     url='https://github.com/embali/enimda/',
@@ -25,5 +25,5 @@ setup(
     ],
     keywords='image border detection',
     py_modules=['enimda', 'images2gif'],
-    install_requires=['numpy>=1.11.1', 'Pillow>=3.3.1'],
+    install_requires=['numpy>=1.11.1', 'Pillow>=3.3.1', 'scipy>=0.18.0'],
 )

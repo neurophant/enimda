@@ -9,7 +9,7 @@ from images2gif import GifWriter
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 
 
 def _entropy(*, signal):
