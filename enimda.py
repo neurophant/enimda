@@ -18,7 +18,8 @@ def _entropy(*, signal):
     :param signal: 1D numpy array
     :returns: entropy
     """
-    prob = (np.size(signal[signal == i]) / signal.size for i in set(signal))
+    hm = dict(zip(*np.unique(signal, return_counts=True)))
+    prob = (hm[i] / signal.size for i in set(signal))
 
     return np.sum(p * np.log2(1.0 / p) for p in prob)
 
