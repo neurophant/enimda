@@ -1,9 +1,7 @@
-from random import randint, shuffle
-from math import log2
-from collections import Counter
+from random import shuffle
 
-from PIL import Image, ImageSequence
-
+from PIL import Image
+import numpy as np
 
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016-2017 Anton Smolin'
@@ -11,24 +9,23 @@ __license__ = 'MIT'
 __version__ = '2.0.0'
 
 
-def __entropy(*, signal):
+def _entropy(*, signal):
     """Calculate entropy
 
-    :param signal: 2D signal
+    :param signal: 1D signal
     :returns: entropy"""
 
-    signal = tuple(value for line in signal for value in line)
-    counts = dict(Counter(signal))
-    probs = (counts[value] / len(signal) for value in set(signal))
+    _, counts = np.unique(signal, return_counts=True)
+    probs = counts / signal.size
 
-    return sum(prob * log2(1.0 / prob) for prob in probs)
+    return -np.sum(probs * np.log2(probs))
 
 
-def __randoms(*, count, limit=None):
-    """Get random indexes
+def _randoms(*, count, limit=None):
+    """Get random indexes of values range
 
     :param count: items count
-    :param limit: limits items count if exceeds this (default None)
+    :param limit: limits items count if exceeds this
     :returns: set of indexes"""
 
     randoms = list(range(count))
@@ -47,13 +44,12 @@ class ENIMDA:
     __multiplier = 1.0
     __frames = []
 
-    def __init__(self, *, fp, size=None, frames=None, rows=0.25, columns=None):
+    def __init__(self, *, fp, size=None, frames=None):
         """Load image
 
         :param fp: path to file or file object
-        :param size: image will be resized to this size if exceeds it
-                     (default None)
-        :param frames: max frames for GIFs (default None)
+        :param size: image will be resized to this one
+        :param frames: max frames to analyze for GIFs
         :returns: None"""
 
         with Image.open(fp) as image:
@@ -64,7 +60,7 @@ class ENIMDA:
                     image.seek(frame_count)
                 except EOFError:
                     break
-            frame_set = __randoms(count=frame_count, limit=frames)
+            frame_set = _randoms(count=frame_count, limit=frames)
 
         with Image.open(fp) as image:
             for frame_index in range(frame_count):
@@ -82,49 +78,48 @@ class ENIMDA:
                     frame.thumbnail(size)
                     self.__multiplier = max((image.width / frame.width,
                                              image.height / frame.height))
-                frame = frame.convert('L')
+                self.__frames.append(frame.convert('L'))
 
-                sides = []
-                for side_index in range(4):
-                    side = frame.copy()
-                    if side_index:
-                        side = side.rotate(side_index * 90)
-
-                    row_count = 2 * int(rows * side.height)
-                    column_set = __randoms(count=side.width, limit=columns)
-                    side = side.crop((0, 0, side.width, row_count))
-                    data = list(side.getdata())
-
-                    lines = [[data[row_index * side.width + column_index]
-                              for column_index in range(side.width)
-                              if column_index in column_set]
-                             for row_index in range(row_count)]
-                    sides.append({'width': side.width,
-                                  'height': side.height,
-                                  'lines': lines})
-
-                self.__frames.append(sides)
-
-    def __scan(self, *, frame, threshold=0.5, fast=True):
+    def __scan(self,
+               *,
+               frame,
+               rows=0.25,
+               columns=None,
+               threshold=0.5,
+               fast=True):
         """Find borders for frame
 
         :param frame: frame
-        :param threshold: algorithm agressiveness (default 0.5)
-        :param fast: only one iteration will be used (default True)
+        :param rows: percent of rows (frame height) to analyze
+        :param columns: columns limit
+        :param threshold: algorithm agressiveness
+        :param fast: only one iteration will be used
         :returns: tuple of border offsets"""
 
+        arr = np.array(frame)
         borders = []
 
-        for side in frame:
-            border = 0
+        for side in range(4):
+            rot = np.rot90(arr, k=side) if side else arr
+            h, w = rot.shape
 
+            if columns is not None:
+                rot = np.hstack([
+                    rot[0:h, r:r + 1]
+                    for r in _randoms(count=w, limit=columns)
+                ])
+                h, w = rot.shape
+
+            height = round(rows * h)
+
+            border = 0
             while True:
                 subborder = 0
                 delta = threshold
-                for center in \
-                        reversed(range(border + 1, side['height'] / 2 + 1)):
-                    upper = _entropy(signal=side['lines'][border:center])
-                    lower = _entropy(signal=side['lines'][center:2 * center - border])
+                for center in reversed(range(border + 1, height + 1)):
+                    upper = _entropy(signal=rot[border:center, 0:w].flatten())
+                    lower = _entropy(
+                        signal=rot[center:2 * center - border, 0:w].flatten())
                     diff = upper / lower if lower != 0.0 else delta
 
                     if diff < delta and diff < threshold:
@@ -139,19 +134,27 @@ class ENIMDA:
                 if fast:
                     break
 
-            borders.append(border)
+            borders.append(int(border * self.__multiplier))
 
         return tuple(borders)
 
-    def scan(self, *, threshold=0.5, fast=True):
+    def scan(self, *, rows=0.25, columns=None, threshold=0.5, fast=True):
         """Find borders for all frames
 
-        :param threshold: algorithm agressiveness (default 0.5)
-        :param fast: only one iteration will be used (default True)
+        :param rows: percent of rows (image height) to analyze
+        :param columns: columns limit
+        :param threshold: algorithm agressiveness
+        :param fast: only one iteration will be used
         :returns: tuple of border offsets"""
 
-        borders = [self.__scan(frame=frame, threshold=threshold, fast=fast)
-                   for frame in self.__frames]
+        borders = [
+            self.__scan(
+                frame=frame,
+                rows=rows,
+                columns=columns,
+                threshold=threshold,
+                fast=fast) for frame in self.__frames
+        ]
 
-        return tuple(min(border[side] for border in borders)
-                     for side in range(4))
+        return tuple(
+            min(border[side] for border in borders) for side in range(4))

@@ -25,5 +25,5 @@ setup(
     ],
     keywords='image border algorithm whitespace enimda',
     py_modules=['enimda'],
-    install_requires=['Pillow>=3.3.1'],
+    install_requires=['Pillow>=4.1.1', 'numpy>=1.12.1'],
 )
