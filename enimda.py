@@ -57,8 +57,6 @@ class ENIMDA:
 
         with Image.open(fp) as image:
             frame_count = 0
-            rows_count = round(rows * image.height)
-            column_set = __randoms(count=image.width, limit=columns)
             while True:
                 frame_count += 1
                 try:
@@ -68,43 +66,39 @@ class ENIMDA:
             frame_set = __randoms(count=frame_count, limit=frames)
 
         with Image.open(fp) as image:
-            if size is not None:
-                if image.width > size or image.height > size:
-                    if image.width > image.height:
-                        width = size
-                        height = round(size * image.height / image.width)
-                        self.__multiplier = image.width / width
-                    elif image.width < image.height:
-                        width = round(size * image.width / image.height)
-                        height = size
-                        self.__multiplier = image.height / height
-                    else:
-                        width = height = size
-                        self.__multiplier = image.width / width
-
-            for frame in range(frame_count):
+            for frame_index in range(frame_count):
                 try:
-                    image.seek(frame)
+                    image.seek(frame_index)
                 except EOFError:
                     break
 
-                if frame not in frame_set:
+                if frame_index not in frame_set:
                     continue
 
-                if self.__multiplier != 1.0:
-                    self.__frames.append(
-                        image
-                        .resize((width, height))
-                        .convert('L'))
-                else:
-                    self.__frames.append(
-                        image
-                        .convert('L'))
+                frame = image.copy()
+                if size is not None and \
+                        (size < image.width or size < image.height):
+                    frame.thumbnail(size)
+                    self.__multiplier = max((image.width / frame.width,
+                                             image.height / frame.height))
+                row_count = round(rows * frame.height)
+                column_set = __randoms(count=frame.width, limit=columns)
+                frame = frame.crop((0, 0, frame.width, row_count)).convert('L')
+                data = list(frame.getdata())
 
-        return None
+                frame_ = []
+                for row_index in range(row_count):
+                    row_ = []
+                    for column_index in range(frame.width):
+                        if column_index not in column_set:
+                            continue
 
-    def __scan_frame(self, *, frame=0, threshold=0.5, indent=0.25, stripes=1.0,
-                     max_stripes=None, fast=True):
+                        row_.append(
+                            data[row_index * frame.width + column_index])
+                    frame_.append(row_)
+                self.__frames.append(frame_)
+
+    def __scan_frame(self, *, frame=0, threshold=0.5, fast=True):
         """Find borders for frame
 
         :param frame: frame index (default 0)
@@ -168,8 +162,7 @@ class ENIMDA:
 
         return tuple(borders)
 
-    def scan(self, *, threshold=0.5, indent=0.25, stripes=1.0,
-             max_stripes=None, fast=True):
+    def scan(self, *, threshold=0.5, fast=True):
         """Find borders for all frames
 
         :param threshold: algorithm agressiveness (default 0.5)
