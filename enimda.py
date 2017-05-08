@@ -1,150 +1,105 @@
 from random import randint, shuffle
-from math import ceil
+from math import log2
+from collections import Counter
 
-from PIL import Image, ImageDraw
-import numpy as np
-from images2gif import GifWriter
+from PIL import Image, ImageSequence
 
 
 __author__ = 'Anton Smolin'
-__copyright__ = 'Copyright (C) 2016 Anton Smolin'
+__copyright__ = 'Copyright (C) 2016-2017 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '1.1.7'
+__version__ = '2.0.0'
 
 
-def _entropy(*, signal):
+def __entropy(*, signal):
     """Calculate entropy
 
-    :param signal: 1D numpy array
-    :returns: entropy
-    """
-    hm = dict(zip(*np.unique(signal, return_counts=True)))
-    prob = (hm[i] / signal.size for i in set(signal))
+    :param signal: 1D signal tuple
+    :returns: entropy"""
 
-    return np.sum(p * np.log2(1.0 / p) for p in prob)
+    counts = dict(Counter(signal))
+    probs = (counts[value] / len(signal) for value in set(signal))
+
+    return sum(prob * log2(1.0 / prob) for prob in probs)
 
 
-def _randoms(*, count, paginate, limit=None):
-    """Get paginated random indexes
+def __randoms(*, count, limit=None):
+    """Get random indexes
 
     :param count: items count
-    :param paginate: items per page
-    :param limit: limits page count if exceeds this (default None)
-    :returns: tuple of indexes
-    """
-    randoms = []
+    :param limit: limits items count if exceeds this (default None)
+    :returns: set of indexes"""
 
-    pages = count // paginate
-    for page in range(pages):
-        randoms.append(randint(page * paginate, (page + 1) * paginate - 1))
-    remainder = count % paginate
-    if remainder:
-        randoms.append(randint(pages * paginate,
-                               pages * paginate + remainder - 1))
+    randoms = list(range(count))
 
-    if limit is not None:
-        shuffle(randoms)
-        randoms = randoms[:limit]
+    if limit is None:
+        return set(randoms)
 
-    return tuple(randoms)
+    shuffle(randoms)
+
+    return set(randoms[:limit])
 
 
 class ENIMDA:
     """ENIMDA class"""
-    __format = None
-    __duration = None
-    __loop = None
-    __initial = None
+
     __multiplier = 1.0
-    __converted = None
-    __borders = None
-    __processed = None
+    __frames = []
 
-    @property
-    def borders(self):
-        """Borders"""
-        return tuple(
-            round(self.__multiplier * min(b[i] for b in self.__borders))
-            for i in range(4))
-
-    @property
-    def has_borders(self):
-        """Image has any borders on any frame"""
-        return any(self.borders)
-
-    def __init__(self, *, fp, minimize=None, frames=1.0, max_frames=None):
+    def __init__(self, *, fp, size=None, frames=None, rows=0.25, columns=None):
         """Load image
 
         :param fp: path to file or file object
-        :param minimize: image will be resized to this size (default None)
-        :param frames: random frames usage percentage (GIFs) (default 1.0)
-        :param max_frames: max frames for GIFs (default None)
-        :returns: None
-        """
+        :param size: image will be resized to this size if exceeds it
+                     (default None)
+        :param frames: max frames for GIFs (default None)
+        :returns: None"""
 
-        # Common properties
         with Image.open(fp) as image:
-            self.__format = image.format
-            self.__duration = image.info.get('duration', 100) / 1000
-            try:
-                self.__loop = int(image.info.get('loop', 0))
-            except TypeError:
-                self.__loop = 0
-            total = 0
+            frame_count = 0
+            rows_count = round(rows * image.height)
+            column_set = __randoms(count=image.width, limit=columns)
             while True:
-                total += 1
+                frame_count += 1
                 try:
-                    image.seek(total)
+                    image.seek(frame_count)
                 except EOFError:
                     break
-
-        # Frame limitations for initial and converted
-        ri = _randoms(count=total, paginate=1, limit=max_frames)
-        paginate = round(1.0 / frames) if 0.0 < frames < 1.0 else 1
-        rc = _randoms(count=total, paginate=paginate, limit=max_frames)
+            frame_set = __randoms(count=frame_count, limit=frames)
 
         with Image.open(fp) as image:
-            # Calculate minified size and multiplier
-            if minimize is not None:
-                if image.width > minimize or image.height > minimize:
+            if size is not None:
+                if image.width > size or image.height > size:
                     if image.width > image.height:
-                        width = minimize
-                        height = round(minimize * image.height / image.width)
+                        width = size
+                        height = round(size * image.height / image.width)
                         self.__multiplier = image.width / width
                     elif image.width < image.height:
-                        width = round(minimize * image.width / image.height)
-                        height = minimize
+                        width = round(size * image.width / image.height)
+                        height = size
                         self.__multiplier = image.height / height
                     else:
-                        width = height = minimize
+                        width = height = size
                         self.__multiplier = image.width / width
-                else:
-                    minimize = None
 
-            # Initial and converted frames
-            self.__initial = []
-            self.__converted = []
-            current = 0
-            while True:
-                if current in ri:
-                    self.__initial.append(image.copy())
-                if current in rc:
-                    if minimize is not None:
-                        self.__converted.append(
-                            image
-                            .copy()
-                            .resize((width, height))
-                            .convert('L'))
-                    else:
-                        self.__converted.append(
-                            image
-                            .copy()
-                            .convert('L'))
+            for frame in range(frame_count):
                 try:
-                    image.seek(current + 1)
+                    image.seek(frame)
                 except EOFError:
                     break
-                current += 1
+
+                if frame not in frame_set:
+                    continue
+
+                if self.__multiplier != 1.0:
+                    self.__frames.append(
+                        image
+                        .resize((width, height))
+                        .convert('L'))
+                else:
+                    self.__frames.append(
+                        image
+                        .convert('L'))
 
         return None
 
@@ -236,81 +191,5 @@ class ENIMDA:
                 fast=fast))
 
         self.__borders = tuple(borders)
-
-        return None
-
-    def outline(self):
-        """Outline image borders with dotted lines"""
-        if self.__initial[0].mode in ('1', 'L', 'I', 'F', 'P'):
-            black = 0
-            white = 255
-        else:
-            black = (0, 0, 0)
-            white = (255, 255, 255)
-
-        w, h = self.__initial[0].size
-
-        self.__processed = []
-        for frame in self.__initial:
-            processed = frame.copy()
-            draw = ImageDraw.Draw(processed)
-
-            for side in range(4):
-                if self.borders[side] > 0:
-                    for i in range(0, h if side % 2 else w):
-                        fill = white if i % 2 == 0 else black
-                        if side == 0:
-                            coords = (i, self.borders[side])
-                        elif side == 1:
-                            coords = (w - 1 - self.borders[side], i)
-                        elif side == 2:
-                            coords = (i, h - 1 - self.borders[side])
-                        elif side == 3:
-                            coords = (self.borders[side], i)
-                        draw.point(coords, fill=fill)
-
-            self.__processed.append(processed)
-
-        return None
-
-    def crop(self):
-        """Crop an image - cut borders/whitespace"""
-        w, h = self.__initial[0].size
-        left = self.borders[3]
-        upper = self.borders[0]
-        right = w - self.borders[1]
-        lower = h - self.borders[2]
-
-        self.__processed = []
-        for frame in self.__initial:
-            self.__processed.append(
-                frame
-                .copy()
-                .crop((left, upper, right, lower)))
-
-        return None
-
-    def save(self, *, fp):
-        """Save an image
-
-        :param fp: path to file or file object
-        :returns: None
-        """
-        if len(self.__processed) == 1:
-            self.__processed[0].save(fp, format=self.__format)
-        else:
-            gifWriter = GifWriter()
-            gifWriter.transparency = False
-            args = (
-                self.__processed,
-                [self.__duration] * len(self.__processed),
-                self.__loop,
-                [(0, 0)] * len(self.__processed),
-                [1] * len(self.__processed))
-            if isinstance(fp, str):
-                with open(fp, 'wb') as fp:
-                    gifWriter.writeGifToFile(fp, *args)
-            else:
-                gifWriter.writeGifToFile(fp, *args)
 
         return None

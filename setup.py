@@ -10,8 +10,8 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='enimda',
-    version='1.1.7',
-    description='Entropy-based image border detection algorithm',
+    version='2.0.0',
+    description='Entropy-based image border detection algorithm library',
     long_description=long_description,
     url='https://github.com/embali/enimda/',
     author='Anton Smolin',
@@ -21,9 +21,9 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
-    keywords='image border detection',
-    py_modules=['enimda', 'images2gif'],
-    install_requires=['numpy>=1.11.1', 'Pillow>=3.3.1', 'scipy>=0.18.0'],
+    keywords='image border algorithm whitespace enimda',
+    py_modules=['enimda'],
+    install_requires=['Pillow>=3.3.1'],
 )

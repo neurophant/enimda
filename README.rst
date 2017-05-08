@@ -1,9 +1,9 @@
 ENIMDA
 ======
 
-ENtropy-based IMage border Detection Algorithm: finds out if your image has borders or whitespaces around and helps you to trim border providing whitespace offsets for every side of a picture.
-
-Supports GIF border detection and its cropping.
+Entropy-based image border detection algorithm: finds out if your image has
+borders or whitespaces around and helps you to trim border providing whitespace
+offsets for every side of a picture, supports animated GIFs.
 
 Algorithm (simplified)
 ----------------------
@@ -26,13 +26,15 @@ to keep side of interest on top:
 Requirements
 ------------
 
-Python 3.5+
+Python 3.6+
 
 Setup
 -----
 
 .. code-block:: bash
     
+    python-3.6 -m venv .env
+    source .env/bin/activate
     pip install enimda
 
 Usage
