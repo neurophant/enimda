@@ -51,21 +51,18 @@ Find if image has any borders:
     em = ENIMDA(fp='test.jpg')
 
     # Scan for borders with high precision
-    em.scan(fast=False)
-
-    # Save image with outlined borders for demonstration
-    em.outline()
-    em.save(fp='outlined.jpg')
+    borders = em.scan(fast=False)
 
     # Print found image borders (tuple)
-    print(em.borders)
+    print(borders)
 
 Demo
 ----
 
 For demo please refer to `ENIMDA Demo <https://github.com/embali/enimda-demo/>`_
 
-Also it lives at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders' instrument
+Also it lives at `Picture Instruments <http://picinst.com/>`_ as 'Remove borders'
+instrument
 
 Tests
 -----
