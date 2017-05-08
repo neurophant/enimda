@@ -14,9 +14,10 @@ __version__ = '2.0.0'
 def __entropy(*, signal):
     """Calculate entropy
 
-    :param signal: 1D signal tuple
+    :param signal: 2D signal
     :returns: entropy"""
 
+    signal = tuple(value for line in signal for value in line)
     counts = dict(Counter(signal))
     probs = (counts[value] / len(signal) for value in set(signal))
 
@@ -81,69 +82,49 @@ class ENIMDA:
                     frame.thumbnail(size)
                     self.__multiplier = max((image.width / frame.width,
                                              image.height / frame.height))
-                row_count = round(rows * frame.height)
-                column_set = __randoms(count=frame.width, limit=columns)
-                frame = frame.crop((0, 0, frame.width, row_count)).convert('L')
-                data = list(frame.getdata())
+                frame = frame.convert('L')
 
-                frame_ = []
-                for row_index in range(row_count):
-                    row_ = []
-                    for column_index in range(frame.width):
-                        if column_index not in column_set:
-                            continue
+                sides = []
+                for side_index in range(4):
+                    side = frame.copy()
+                    if side_index:
+                        side = side.rotate(side_index * 90)
 
-                        row_.append(
-                            data[row_index * frame.width + column_index])
-                    frame_.append(row_)
-                self.__frames.append(frame_)
+                    row_count = 2 * int(rows * side.height)
+                    column_set = __randoms(count=side.width, limit=columns)
+                    side = side.crop((0, 0, side.width, row_count))
+                    data = list(side.getdata())
 
-    def __scan_frame(self, *, frame=0, threshold=0.5, fast=True):
+                    lines = [[data[row_index * side.width + column_index]
+                              for column_index in range(side.width)
+                              if column_index in column_set]
+                             for row_index in range(row_count)]
+                    sides.append({'width': side.width,
+                                  'height': side.height,
+                                  'lines': lines})
+
+                self.__frames.append(sides)
+
+    def __scan(self, *, frame, threshold=0.5, fast=True):
         """Find borders for frame
 
-        :param frame: frame index (default 0)
+        :param frame: frame
         :param threshold: algorithm agressiveness (default 0.5)
-        :param indent: starting point in percent of width/height (default 0.25)
-        :param stripes: random stripes usage coefficient (default 1.0)
-        :param max_stripes: max stripes for processing (default None)
         :param fast: only one iteration will be used (default True)
-        :returns: tuple of border offsets
-        """
-        arr = np.array(self.__converted[frame])
+        :returns: tuple of border offsets"""
+
         borders = []
-        paginate = round(1.0 / stripes) if 0.0 < stripes < 1.0 else 1
 
-        # For every side of an image
-        for side in range(4):
-            # Rotate array counter-clockwise to keep side of interest on top
-            rot = np.rot90(arr, k=side)
-            h, w = rot.shape
-
-            # Skip some columns
-            arrs = []
-            for r in _randoms(count=w, paginate=paginate, limit=max_stripes):
-                arrs.append(rot[0: h, r: r + 1])
-            rot = np.hstack(arrs)
-            h, w = rot.shape
-
-            # Iterative detection
+        for side in frame:
             border = 0
-            while True:
-                # Find not-null starting point
-                for start in range(border + 1, round(indent * h) + 1):
-                    if _entropy(
-                            signal=rot[border: start, 0: w].flatten()) > 0.0:
-                        break
 
-                # Find sub-border
+            while True:
                 subborder = 0
                 delta = threshold
-                for center in reversed(range(start, round(indent * h) + 1)):
-                    upper = _entropy(
-                        signal=rot[border: center, 0: w].flatten())
-                    lower = _entropy(
-                        signal=rot[center: 2 * center - border, 0: w]
-                        .flatten())
+                for center in \
+                        reversed(range(border + 1, side['height'] / 2 + 1)):
+                    upper = _entropy(signal=side['lines'][border:center])
+                    lower = _entropy(signal=side['lines'][center:2 * center - border])
                     diff = upper / lower if lower != 0.0 else delta
 
                     if diff < delta and diff < threshold:
@@ -166,23 +147,11 @@ class ENIMDA:
         """Find borders for all frames
 
         :param threshold: algorithm agressiveness (default 0.5)
-        :param indent: starting point in percent of width/height (default 0.25)
-        :param stripes: random stripes usage coefficient (default 1.0)
-        :param max_stripes: max stripes for processing (default None)
         :param fast: only one iteration will be used (default True)
-        :returns: None
-        """
-        borders = []
+        :returns: tuple of border offsets"""
 
-        for f in range(len(self.__converted)):
-            borders.append(self.__scan_frame(
-                frame=f,
-                threshold=threshold,
-                indent=indent,
-                stripes=stripes,
-                max_stripes=max_stripes,
-                fast=fast))
+        borders = [self.__scan(frame=frame, threshold=threshold, fast=fast)
+                   for frame in self.__frames]
 
-        self.__borders = tuple(borders)
-
-        return None
+        return tuple(min(border[side] for border in borders)
+                     for side in range(4))
