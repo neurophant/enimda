@@ -46,7 +46,7 @@ Setup
 Usage
 -----
 
-Find if image has any borders:
+Find if image has borders:
 
 .. code-block:: python
 
@@ -59,7 +59,7 @@ Find if image has any borders:
     # Scan for borders with high precision
     borders = em.scan(fast=False)
 
-    # Print found image borders (tuple)
+    # Print found image borders (tuple): top, right, bottom, left
     print(borders)
 
 Demo

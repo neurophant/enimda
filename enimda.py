@@ -119,8 +119,7 @@ class ENIMDA:
             border = 0
             while True:
                 for start in range(border + 1, height + 1):
-                    if _entropy(
-                            signal=rot[border: start, 0: w].flatten()) > 0.0:
+                    if _entropy(signal=rot[border:start, 0:w].flatten()) > 0.0:
                         break
 
                 subborder = 0
