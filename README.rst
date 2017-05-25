@@ -5,8 +5,11 @@ Entropy-based image border detection algorithm: finds out if your image has
 borders or whitespaces around and helps you to trim border providing whitespace
 offsets for every side of a picture, supports animated GIFs.
 
-|travisci|
+|pypi| |travisci|
 
+.. |pypi| image:: https://badge.fury.io/py/enimda.svg
+    :target: https://badge.fury.io/py/enimda
+    :alt: pypi version
 .. |travisci| image:: https://travis-ci.org/embali/enimda.svg?branch=master
     :target: https://travis-ci.org/embali/enimda
     :alt: travis ci build status
@@ -32,7 +35,7 @@ to keep side of interest on top:
 Requirements
 ------------
 
-Python 3.6+
+Python 3.5+
 
 Setup
 -----

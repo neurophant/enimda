@@ -6,7 +6,7 @@ import numpy as np
 __author__ = 'Anton Smolin'
 __copyright__ = 'Copyright (C) 2016-2017 Anton Smolin'
 __license__ = 'MIT'
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 
 
 def _entropy(*, signal):
