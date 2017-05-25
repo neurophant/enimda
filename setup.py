@@ -24,7 +24,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    keywords='image border whitespace detection algorithm enimda',
+    keywords='image border whitespace detection algorithm enimda entropy',
     packages=['enimda'],
     install_requires=['imgpy>=1.1.0', 'numpy>=1.12.1'],
 )
