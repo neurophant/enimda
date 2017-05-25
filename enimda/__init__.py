@@ -1,6 +1,7 @@
 from random import shuffle
 
 from PIL import Image
+from imgpy import Img
 import numpy as np
 
 __author__ = 'Anton Smolin'
@@ -21,68 +22,33 @@ def _entropy(*, signal):
     return -np.sum(probs * np.log2(probs))
 
 
-def _randoms(*, count, limit=None):
-    """Get random indexes of values range
-
-    :param count: items count
-    :param limit: limits items count if exceeds this
-    :returns: set of indexes"""
-
-    randoms = list(range(count))
-
-    if limit is None:
-        return set(randoms)
-
-    shuffle(randoms)
-
-    return set(randoms[:limit])
-
-
 class ENIMDA:
     """ENIMDA class"""
 
     __multiplier = None
     __frames = None
 
-    def __init__(self, *, fp, size=None, frames=None):
+    def __init__(self, *, fp, limit=None, size=None):
         """Load image
 
         :param fp: path to file or file object
+        :param limit: max frames to analyze for GIFs
         :param size: image will be resized to this one
-        :param frames: max frames to analyze for GIFs
         :returns: None"""
 
         self.__multiplier = 1.0
-        self.__frames = []
 
-        with Image.open(fp) as image:
-            frame_count = 0
-            while True:
-                frame_count += 1
-                try:
-                    image.seek(frame_count)
-                except EOFError:
-                    break
-            frame_set = _randoms(count=frame_count, limit=frames)
+        with Img(fp=fp) as image:
+            image.load(limit=limit, first=False)
 
-        with Image.open(fp) as image:
-            for frame_index in range(frame_count):
-                try:
-                    image.seek(frame_index)
-                except EOFError:
-                    break
+            if size is not None and (size < image.width or size < image.height):
+                width_, height_ = image.size
+                image.thumbnail((size, size), resample=Image.NEAREST)
+                self.__multiplier = width_ / image.width if width_ > height_ \
+                    else height_ / image.height
 
-                if frame_index not in frame_set:
-                    continue
-
-                frame = image.copy()
-                if size is not None and \
-                        (size < image.width or size < image.height):
-                    frame.thumbnail((size, size), resample=Image.NEAREST)
-                    self.__multiplier = image.width / frame.width \
-                        if image.width > image.height \
-                        else image.height / frame.height
-                self.__frames.append(frame.convert('L'))
+            image.convert('L')
+            self.__frames = image.frames
 
     def __scan(self,
                *,
@@ -108,10 +74,9 @@ class ENIMDA:
             h, w = rot.shape
 
             if columns is not None:
-                rot = np.hstack([
-                    rot[0:h, r:r + 1]
-                    for r in _randoms(count=w, limit=columns)
-                ])
+                randoms = list(range(w))
+                shuffle(randoms)
+                rot = np.hstack([rot[0:h, r:r + 1] for r in randoms[:columns]])
                 h, w = rot.shape
 
             height = round(rows * h)

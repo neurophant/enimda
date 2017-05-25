@@ -38,14 +38,14 @@ def test_anima_bordered_partial(anima_bordered, fast, size):
 @pytest.mark.parametrize('fast', (True, False))
 @pytest.mark.parametrize('size', (None, 200))
 def test_anima_bordered_frames_partial(anima_bordered, fast, size):
-    em = anima_bordered(size=size, frames=10)
+    em = anima_bordered(limit=10, size=size)
     assert any(em.scan(columns=20, fast=fast))
 
 
 @pytest.mark.parametrize('fast', (True, False))
 @pytest.mark.parametrize('size', (None, 200))
 def test_anima_bordered_frames_partial_max(anima_bordered, fast, size):
-    em = anima_bordered(size=size, frames=10)
+    em = anima_bordered(limit=10, size=size)
     assert any(em.scan(columns=20, fast=fast))
 
 
@@ -74,5 +74,5 @@ def test_anima_bordered_full(anima_bordered, params):
 @pytest.mark.parametrize('fast', (True, False))
 @pytest.mark.parametrize('size', (None, 200))
 def test_anima_clear(anima_clear, fast, size):
-    em = anima_clear(size=size, frames=10)
+    em = anima_clear(limit=10, size=size)
     assert not any(em.scan(columns=20, fast=fast))
