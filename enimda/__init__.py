@@ -41,7 +41,8 @@ class ENIMDA:
         with Img(fp=fp) as image:
             image.load(limit=limit, first=False)
 
-            if size is not None and (size < image.width or size < image.height):
+            if size is not None and (size < image.width or
+                                     size < image.height):
                 width_, height_ = image.size
                 image.thumbnail((size, size), resample=Image.NEAREST)
                 self.__multiplier = width_ / image.width if width_ > height_ \
